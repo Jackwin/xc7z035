@@ -1,44 +1,53 @@
 `timescale 1ns/1ps
-module ad9517_cfg (
-    input           clk,
-    input           rst,
+module ad9517_cfg # (parameter
+    bit [4:0] MOSI_DATA_WIDTH = 16,
+    bit [4:0] MISO_DATA_WIDTH = 8
+    )
+     (
+    input logic                         clk,
+    input logic                         rst,
 
-    output          o_spi_wr_cmd,
-    output          o_spi_rd_cmd,
-    output [23:0]   o_spi_wr_data,
-    input  [7:0]    i_spi_rd_data,
-    input           i_spi_busy,
-    input           i_cfg_start
+    output logic                        o_spi_wr_cmd,
+    output logic                        o_spi_rd_cmd,
+    output logic [MOSI_DATA_WIDTH-1:0]  o_spi_wr_data,
+    input  logic [MISO_DATA_WIDTH-1:0]  i_spi_rd_data,
+    input  logic                        i_spi_busy,
+    input  logic                        i_cfg_start
 
 );
 
 // read ID
 
 localparam AD9517_ID = 8'h53;
-logic [2:0]     cs, ns;
-localparam  IDLE_s = 3'd0,
-            READ_ID_s = 3'd1,
-            CHECK_ID_s = 3'd2,
-            RD_ROM_s = 3'd3,
-            DELAY_s = 3'd4,
-            SPI_CFG_s = 3'd5,
-            SPI_CFG_ACK_s = 3'd6;
-reg         cfg_start_r, cfg_start;
-reg         timeout;
-reg [5:0]   timer_cnt;
-reg [6:0]   addr_next, addr;
-reg         rom_ena;
-wire [31:0] rom_data;
+logic [3:0]     cs, ns;
+localparam  IDLE_s = 1,
+            READ_ID_s = 2,
+            CHECK_ID_s = 3,
+            RD_ROM_s = 4,
+            DELAY_s = 5,
+            SPI_CFG_s = 6,
+            SPI_CFG_ACK_s = 7,
+            READ_CFG_s = 8,
+            CONFIRM_CFG_s= 9;
 
-reg         spi_wr_cmd;
-reg         spi_rd_cmd;
-reg [23:0]  spi_wr_data;
-reg [15:0]  spi_rd_data;
-reg [5:0]   spi_cfg_cnt, spi_cfg_cnt_next;  
+logic         cfg_start_r, cfg_start;
+logic         timeout;
+logic [5:0]   timer_cnt;
+logic [6:0]   addr_next, addr;
+logic         rom_ena;
+logic [MOSI_DATA_WIDTH-1:0] rom_data;
 
-assign o_spi_wr_cmd = spi_wr_cmd;
-assign o_spi_rd_cmd = spi_rd_cmd;
-assign o_spi_wr_data = spi_wr_data;
+logic         spi_wr_cmd;
+logic         spi_rd_cmd;
+logic [MOSI_DATA_WIDTH-1:0]  spi_wr_data;
+logic [15:0]  spi_rd_data;
+logic [5:0]   spi_cfg_cnt, spi_cfg_cnt_next;  
+
+always_comb begin
+    o_spi_wr_cmd = spi_wr_cmd;
+    o_spi_rd_cmd = spi_rd_cmd;
+    o_spi_wr_data = spi_wr_data;
+end
 
 
 always_ff @(posedge clk) begin
@@ -66,6 +75,7 @@ always_comb begin
     rom_ena = 1'b0;
     spi_rd_cmd = 1'b0;
     spi_wr_cmd = 1'b0;
+    spi_wr_data = 0;
     case(cs)
     IDLE_s: begin
         if (cfg_start & ~i_spi_busy) begin
@@ -74,7 +84,7 @@ always_comb begin
     end
     READ_ID_s: begin
         spi_rd_cmd = 1'b1;
-        spi_wr_data = 24'h100300;
+        spi_wr_data = 24'h008003;
         ns = CHECK_ID_s;
     end
     CHECK_ID_s: begin
@@ -95,12 +105,23 @@ always_comb begin
     end
     SPI_CFG_s: begin
         spi_wr_cmd = 1'b1;
-        spi_wr_data = {3'b000,rom_data[28:8]};
+        spi_wr_data = rom_data;
+        //spi_wr_data = 0;
         ns = SPI_CFG_ACK_s;
     end
     SPI_CFG_ACK_s: begin
         if (~i_spi_busy & spi_cfg_cnt != 6'd62) ns = RD_ROM_s;
-        else if (~i_spi_busy & spi_cfg_cnt != 6'd62) ns = IDLE_s;
+        else if (~i_spi_busy & spi_cfg_cnt == 6'd62) ns = READ_CFG_s;
+    end
+    READ_CFG_s: begin
+        spi_rd_cmd = 1'b1;
+        spi_wr_data = 24'h00801c;
+        ns = CONFIRM_CFG_s;
+    end
+    CONFIRM_CFG_s: begin
+        if (i_spi_rd_data[7:0] == 8'h01) begin
+            ns = IDLE_s;            
+        end
     end
 
     default:
@@ -144,6 +165,21 @@ spi_config_rom spi_9517_config_rom (
   .ena(rom_ena),      // input wire ena
   .addra(addr),  // input wire [6 : 0] addra
   .douta(rom_data)  // output wire [31 : 0] douta
+);
+
+ila_ad9517 your_instance_name (
+	.clk(clk), // input wire clk
+	.probe0(cs), // input wire [2:0]  probe0  
+	.probe1(spi_wr_data), // input wire [23:0]  probe1 
+	.probe2(i_spi_rd_data), // input wire [7:0]  probe2 
+	.probe3(spi_wr_cmd), // input wire [0:0]  probe3 
+	.probe4(spi_rd_cmd), // input wire [0:0]  probe4 
+	.probe5(i_spi_busy), // input wire [0:0]  probe5 
+	.probe6(i_cfg_start), // input wire [0:0]  probe6 
+	.probe7(timer_cnt), // input wire [5:0]  probe7 
+	.probe8(addr), // input wire [6:0]  probe8 
+	.probe9(timeout), // input wire [0:0]  probe9 
+	.probe10(rom_ena) // input wire [0:0]  probe10
 );
 
 

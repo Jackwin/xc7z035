@@ -46,21 +46,23 @@ spi_master #(
 
 module spi_master #( parameter
 
-  bit CPOL = 0,                  // Clock polarity for SPI interface
+    bit CPOL = 0,                  // Clock polarity for SPI interface
                                  // 0 - SPI mode 0
                                  //     data updates on rising edge
                                  //     data reads on falling edge
                                  // 1 - SPI mode 2
                                  //     data updates on falling edge
                                  //     data reads on rising edge
-  bit FREE_RUNNING_SPI_CLK = 0,  // 0 - clk_pin is active only when ncs_pin = 0
+    bit FREE_RUNNING_SPI_CLK = 0,  // 0 - clk_pin is active only when ncs_pin = 0
                                  // 1 - clk pin is always active
-  bit [5:0] MOSI_DATA_WIDTH = 8, // data word width in bits
-  bit WRITE_MSB_FIRST = 1,       // 0 - LSB first
+    bit [5:0] MOSI_DATA_WIDTH = 8, // data word width in bits
+    bit WRITE_MSB_FIRST = 1,       // 0 - LSB first
                                  // 1 - MSB first
-  bit [5:0] MISO_DATA_WIDTH = 8, // data word width in bits
-  bit READ_MSB_FIRST = 1         // 0 - LSB first
+    bit [5:0] MISO_DATA_WIDTH = 8, // data word width in bits
+    bit READ_MSB_FIRST = 1,         // 0 - LSB first
                                  // 1 - MSB first
+    bit [5:0] INSTR_HEADER_LEN = 8 // The instruction header length in read operation
+                                    // It should be no more than MOSI_DATA_WIDTH
 )(
   input clk,                     // system clock
   input nrst,                    // reset (inversed)
@@ -90,8 +92,12 @@ module spi_master #( parameter
 localparam WRITE_SEQ_START = 2;
 localparam WRITE_SEQ_END = WRITE_SEQ_START+2*MOSI_DATA_WIDTH;
 
-localparam READ_SEQ_START = WRITE_SEQ_END;
+localparam INSTR_HEADER_SEQ_END = WRITE_SEQ_START + 2*INSTR_HEADER_LEN;
+
+//localparam READ_SEQ_START = WRITE_SEQ_END;
+localparam READ_SEQ_START = INSTR_HEADER_SEQ_END;
 localparam READ_SEQ_END = READ_SEQ_START+2*MISO_DATA_WIDTH;
+
 
 
 logic spi_clk_rise;
@@ -130,132 +136,164 @@ reverse_vector #(
   .out( mosi_data_rev[MOSI_DATA_WIDTH-1:0] )
 );
 
+logic [INSTR_HEADER_LEN-1:0] instr_data_rev;
+reverse_vector #(
+  .WIDTH( INSTR_HEADER_LEN )
+) reverse_instr_data (
+  .in( mosi_data[INSTR_HEADER_LEN-1:0] ),
+  .out( instr_data_rev[INSTR_HEADER_LEN-1:0] )
+);
+
 
 logic clk_pin_before_inversion;                  // inversion is optional, see CPOL parameter
 logic [7:0] sequence_cntr = 0;
 logic rd_nwr = 0;                                // buffering data direction
 logic [MOSI_DATA_WIDTH-1:0] mosi_data_buf = 0;   // buffering mosi_data
 logic [MISO_DATA_WIDTH-1:0] miso_data_buf = 0;   // buffering miso_data
+logic [INSTR_HEADER_LEN-1:0] instr_data_buf = 0;  // buffering instr_data
 
 always_ff @(posedge clk) begin
-  if( ~nrst ) begin
-    clk_pin_before_inversion <= CPOL;
-    ncs_pin <= 1'b1;
-    mosi_pin <= 1'b0;
-    oe_pin <= 1'b0;
-
-    sequence_cntr[7:0] <= 0;
-    rd_nwr <= 0;
-    mosi_data_buf[MOSI_DATA_WIDTH-1:0] <= 0;
-    miso_data_buf[MISO_DATA_WIDTH-1:0] <= 0;
-  end else begin
-
-    if( FREE_RUNNING_SPI_CLK ) begin
-      if ( spi_clk_rise ) begin
-        clk_pin_before_inversion <= 1'b1;
-      end
-      if( spi_clk_fall ) begin
-        clk_pin_before_inversion <= 1'b0;
-      end
-    end else begin  // FREE_RUNNING_SPI_CLK = 0
-      if ( ~ncs_pin ) begin
-        if ( spi_clk_rise ) begin
-          clk_pin_before_inversion <= 1'b1;
-        end
-        if( spi_clk_fall ) begin
-          clk_pin_before_inversion <= 1'b0;
-        end
-      end else begin // ncs_pin = 1
+    if( ~nrst ) begin
         clk_pin_before_inversion <= CPOL;
-      end
-    end // if( FREE_RUNNING_SPI_CLK )
-
-// WRITE =======================================================================
-
-    // sequence start condition
-    //*cmd_rise signals are NOT synchronous with spi_clk edges
-    if( sequence_cntr[7:0]==0 && (spi_wr_cmd_rise || spi_rd_cmd_rise) ) begin
-      if( spi_rd_cmd_rise ) begin
-        rd_nwr <= 1'b1;
-      end else begin
-        rd_nwr <= 1'b0;
-      end
-      // buffering mosi_data to avoid data change after shift_cmd issued
-      if( WRITE_MSB_FIRST ) begin
-        mosi_data_buf[MOSI_DATA_WIDTH-1:0] <= mosi_data_rev[MOSI_DATA_WIDTH-1:0];
-      end else begin
-        mosi_data_buf[MOSI_DATA_WIDTH-1:0] <= mosi_data[MOSI_DATA_WIDTH-1:0];
-      end
-      sequence_cntr[7:0] <= sequence_cntr[7:0] + 1'b1;
-    end
-
-    // second step of initialization, updating outputs synchronously with spi_clk edge
-    if( sequence_cntr[7:0]==1 && spi_clk_rise ) begin
-      ncs_pin <= 1'b0;
-      oe_pin <= 1'b1;
-      sequence_cntr[7:0] <= sequence_cntr[7:0] + 1'b1;
-    end
-
-    // clocking out data
-    if( sequence_cntr[7:0]>=WRITE_SEQ_START && sequence_cntr[7:0]<WRITE_SEQ_END ) begin
-
-      // we should omit this to start sequence on specific edge
-      if ( spi_clk_rise ) begin
-        sequence_cntr[7:0] <= sequence_cntr[7:0] + 1'b1;
-      end
-      if( spi_clk_fall ) begin
-        // changing mosi_pin
-        mosi_pin <= mosi_data_buf[0];
-        // shifting out data is alvays LSB first
-        mosi_data_buf[MOSI_DATA_WIDTH-1:0] <= {1'b0,mosi_data_buf[MOSI_DATA_WIDTH-1:1]};
-        sequence_cntr[7:0] <= sequence_cntr[7:0] + 1'b1;
-      end
-    end
-
-    // waiting for valid edge to switch direction
-    if( ~rd_nwr ) begin
-      // end of write transaction
-      // resetting shifter to default state
-      if( sequence_cntr[7:0]==WRITE_SEQ_END && spi_clk_fall ) begin
         ncs_pin <= 1'b1;
         mosi_pin <= 1'b0;
         oe_pin <= 1'b0;
+
         sequence_cntr[7:0] <= 0;
-      end
-    end else begin
-      if( sequence_cntr[7:0]==WRITE_SEQ_END && spi_clk_fall ) begin
-        //ncs_pin <= 1'b0;
-        mosi_pin <= 1'b0;
-        oe_pin <= 1'b0;
-        sequence_cntr[7:0] <= sequence_cntr[7:0] + 1'b1;
-      end
+        rd_nwr <= 0;
+        mosi_data_buf[MOSI_DATA_WIDTH-1:0] <= 0;
+        miso_data_buf[MISO_DATA_WIDTH-1:0] <= 0;
+    end 
+    else begin
 
-// READ ========================================================================
+        if( FREE_RUNNING_SPI_CLK ) begin
+            if ( spi_clk_rise ) begin
+                clk_pin_before_inversion <= 1'b1;
+            end
+            if( spi_clk_fall ) begin
+                clk_pin_before_inversion <= 1'b0;
+            end
+        end 
+        else begin  // FREE_RUNNING_SPI_CLK = 0
+            if ( ~ncs_pin ) begin
+                if ( spi_clk_rise ) begin
+                    clk_pin_before_inversion <= 1'b1;
+                end
+                if( spi_clk_fall ) begin
+                    clk_pin_before_inversion <= 1'b0;
+                end
+            end 
+            else begin // ncs_pin = 1
+                clk_pin_before_inversion <= CPOL;
+            end
+        end // if( FREE_RUNNING_SPI_CLK )
 
-      // clocking in data
-      if( sequence_cntr[7:0]>=READ_SEQ_START && sequence_cntr[7:0]<READ_SEQ_END ) begin
+// WRITE =======================================================================
 
-          if ( spi_clk_rise ) begin
-            // shifting in data is alvays LSB first
-            miso_data_buf[MISO_DATA_WIDTH-1:0] <= {miso_pin,miso_data_buf[MOSI_DATA_WIDTH-1:1]};
+        // sequence start condition
+        //*cmd_rise signals are NOT synchronous with spi_clk edges
+        if( sequence_cntr[7:0]==0 && (spi_wr_cmd_rise || spi_rd_cmd_rise) ) begin
+            if( spi_rd_cmd_rise ) begin
+                rd_nwr <= 1'b1;
+            end
+            else begin
+                rd_nwr <= 1'b0;
+            end
+            // buffering mosi_data to avoid data change after shift_cmd issued
+            if( WRITE_MSB_FIRST ) begin
+                mosi_data_buf[MOSI_DATA_WIDTH-1:0] <= mosi_data_rev[MOSI_DATA_WIDTH-1:0];
+                instr_data_buf[INSTR_HEADER_LEN-1:0] <= instr_data_rev[INSTR_HEADER_LEN-1:0];
+            end 
+            else begin
+                mosi_data_buf[MOSI_DATA_WIDTH-1:0] <= mosi_data[MOSI_DATA_WIDTH-1:0];
+                instr_data_buf[INSTR_HEADER_LEN-1:0] <= mosi_data[INSTR_HEADER_LEN-1:0];
+            end
             sequence_cntr[7:0] <= sequence_cntr[7:0] + 1'b1;
-          end
-          // we should omit this to start sequence on specific edge
-          if( spi_clk_fall ) begin
+        end
+
+        // second step of initialization, updating outputs synchronously with spi_clk edge
+        if( sequence_cntr[7:0]==1 && spi_clk_rise ) begin
+            ncs_pin <= 1'b0;
+            oe_pin <= 1'b1;
             sequence_cntr[7:0] <= sequence_cntr[7:0] + 1'b1;
-          end
-      end
+        end
 
-      // waiting for valid edge to end read transaction
-      if( sequence_cntr[7:0]==READ_SEQ_END && spi_clk_fall ) begin
-          ncs_pin <= 1'b1;
-          mosi_pin <= 1'b0;
-          oe_pin <= 1'b0;
-          sequence_cntr[7:0] <= 0;
-      end
+        // clocking out data in write command
+        if( sequence_cntr[7:0]>=WRITE_SEQ_START && sequence_cntr[7:0]<WRITE_SEQ_END && ~rd_nwr) begin
 
-    end // if( ~rd_nwr )
-  end // if( nrst )
+            // we should omit this to start sequence on specific edge
+            if ( spi_clk_rise ) begin
+                sequence_cntr[7:0] <= sequence_cntr[7:0] + 1'b1;
+            end
+            if( spi_clk_fall ) begin
+                // changing mosi_pin
+                mosi_pin <= mosi_data_buf[0];
+                // shifting out data is alvays LSB first
+                mosi_data_buf[MOSI_DATA_WIDTH-1:0] <= {1'b0,mosi_data_buf[MOSI_DATA_WIDTH-1:1]};
+                sequence_cntr[7:0] <= sequence_cntr[7:0] + 1'b1;
+            end
+        end
+        // clocking out data in read command
+        if( sequence_cntr[7:0]>=WRITE_SEQ_START && sequence_cntr[7:0]<INSTR_HEADER_SEQ_END && rd_nwr) begin
+
+            // we should omit this to start sequence on specific edge
+            if ( spi_clk_rise ) begin
+                sequence_cntr[7:0] <= sequence_cntr[7:0] + 1'b1;
+            end
+            if( spi_clk_fall ) begin
+                // changing mosi_pin
+                mosi_pin <= instr_data_buf[0];
+                // shifting out data is alvays LSB first
+                instr_data_buf[INSTR_HEADER_LEN-1:0] <= {1'b0,instr_data_buf[INSTR_HEADER_LEN-1:1]};
+                sequence_cntr[7:0] <= sequence_cntr[7:0] + 1'b1;
+            end
+        end
+
+        // waiting for valid edge to switch direction
+        if( ~rd_nwr ) begin
+            // end of write transaction
+            // resetting shifter to default state
+            if( sequence_cntr[7:0]==WRITE_SEQ_END && spi_clk_fall ) begin
+                ncs_pin <= 1'b1;
+                mosi_pin <= 1'b0;
+                oe_pin <= 1'b0;
+                sequence_cntr[7:0] <= 0;
+            end
+        end 
+        else begin
+            if( sequence_cntr[7:0]==INSTR_HEADER_SEQ_END && spi_clk_fall ) begin
+                //ncs_pin <= 1'b0;
+                mosi_pin <= 1'b0;
+                oe_pin <= 1'b0;
+                sequence_cntr[7:0] <= sequence_cntr[7:0] + 1'b1;
+            end
+
+    // READ ========================================================================
+
+            // clocking in data
+            if( sequence_cntr[7:0]>=READ_SEQ_START && sequence_cntr[7:0]<READ_SEQ_END ) begin
+
+                if ( spi_clk_rise ) begin
+                    // shifting in data is alvays LSB first
+                    miso_data_buf[MISO_DATA_WIDTH-1:0] <= {miso_pin,miso_data_buf[MISO_DATA_WIDTH-1:1]};
+                    sequence_cntr[7:0] <= sequence_cntr[7:0] + 1'b1;
+                end
+                // we should omit this to start sequence on specific edge
+                if( spi_clk_fall ) begin
+                    sequence_cntr[7:0] <= sequence_cntr[7:0] + 1'b1;
+                end
+            end
+
+            // waiting for valid edge to end read transaction
+            if( sequence_cntr[7:0]==READ_SEQ_END && spi_clk_fall ) begin
+                ncs_pin <= 1'b1;
+                mosi_pin <= 1'b0;
+                oe_pin <= 1'b0;
+                sequence_cntr[7:0] <= 0;
+            end
+
+        end // if( ~rd_nwr )
+    end // if( nrst )
 end // always
 
 

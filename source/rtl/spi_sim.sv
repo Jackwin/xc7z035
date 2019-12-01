@@ -54,7 +54,7 @@ assign spi_clk = sys_clk_cnt[2];
 logic           spi_wr_cmd;
 logic           spi_rd_cmd;
 logic           spi_busy;
-logic [31:0]    spi_wr_data;
+logic [23:0]    spi_wr_data;
 logic [7:0]    spi_rd_data;
 logic           spi_sclk;
 logic           spi_cs_n;
@@ -69,7 +69,7 @@ initial begin
     @(posedge sys_clk) begin
         if (~spi_busy) begin
             spi_wr_cmd <= 1;
-            spi_wr_data <= 32'h00a5cdef;
+            spi_wr_data <= 24'h5aa5cf;
         end
     end
 
@@ -82,7 +82,7 @@ initial begin
     @(posedge sys_clk) begin
         if (~spi_busy) begin
             spi_rd_cmd <= 1;
-            spi_wr_data <= 32'h00a5cabcd;
+            spi_wr_data <= 24'h00a5ca;
         end
     end
 
@@ -94,10 +94,11 @@ end
 spi_master #(
       .CPOL( 0 ),
       .FREE_RUNNING_SPI_CLK( 0 ),
-      .MOSI_DATA_WIDTH( 32 ),
+      .MOSI_DATA_WIDTH( 24 ),
       .WRITE_MSB_FIRST( 1 ),
       .MISO_DATA_WIDTH( 8 ),
-      .READ_MSB_FIRST( 1 )
+      .READ_MSB_FIRST( 1 ),
+      .INSTR_HEADER_LEN(16)
     ) SM1 (
       .clk(sys_clk),
       .nrst(~sys_rst  ),

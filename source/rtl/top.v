@@ -48,13 +48,30 @@ module top (
     output          spi_sclk,
     inout           spi_sdio
 );
+localparam MOSI_DATA_WIDTH = 24;
+localparam MISO_DATA_WIDTH = 8;
+localparam INSTR_HEADER_LEN = 16;
 
-wire    mdio_t;
-wire    mdio_i;
-wire    mdio_o;
-wire    locked;
-wire    clk_200m;
-wire    clk_20m;
+wire        mdio_t;
+wire        mdio_i;
+wire        mdio_o;
+wire        locked;
+wire        clk_200m;
+wire        clk_20m;
+
+wire        spi_mosi;
+wire        spi_miso;
+wire        spi_oe, spi_oe_n;
+reg [4:0]   cnt;
+wire        spi_clk;
+wire        spi_wr_cmd;
+wire        spi_rd_cmd;
+wire        spi_busy;
+wire [23:0] spi_wr_data;
+wire [7:0]  spi_rd_data;
+reg         cfg_start;
+wire        cfg_start_vio;
+reg         cfg_start_r;
 
 assign eth_mdio = ~mdio_t ? mdio_o : 1'bz;
 assign mdio_i = eth_mdio;
@@ -100,10 +117,20 @@ ila_0 ila_clk (
 	.probe0(locked) // input wire [0:0] probe0
 );
 
+always @(posedge clk_20m) begin
+    cfg_start_r <= cfg_start_vio;
+    cfg_start <= ~cfg_start_vio & cfg_start_r;
+end
+
+vio_0 vio_0_cfg (
+  .clk(clk_200m),                // input wire clk
+  .probe_out0(cfg_start_vio)  // output wire [0 : 0] probe_out0
+);
+
 system_wrapper system_wrapper_i();
 
 ad9517_cfg ad9517_cfg_i(
-    .clk(clk_200m),
+    .clk(clk_20m),
     .rst(~rstn),
     .o_spi_wr_cmd(spi_wr_cmd),
     .o_spi_rd_cmd(spi_rd_cmd),
@@ -114,16 +141,7 @@ ad9517_cfg ad9517_cfg_i(
 );
 
 
-wire        spi_mosi;
-wire        spi_miso;
-wire        spi_oe;
-reg [2:0]   cnt;
-wire        spi_clk;
-wire        spi_wr_cmd;
-wire        spi_rd_cmd;
-wire        spi_busy;
-wire [23:0]  spi_wr_data;
-wire [7:0]  spi_rd_data;
+
 always @(posedge clk_20m) begin
     if (~rstn) begin
         cnt <= 'h0;
@@ -133,15 +151,16 @@ always @(posedge clk_20m) begin
     end
 end
 
-assign spi_clk = cnt[2];
+assign spi_clk = cnt[4];
 
 spi_master #(
       .CPOL( 0 ),
-      .FREE_RUNNING_SPI_CLK( 0 ),
-      .MOSI_DATA_WIDTH( 24 ),
+      .FREE_RUNNING_SPI_CLK( 1 ),
+      .MOSI_DATA_WIDTH( MOSI_DATA_WIDTH),
       .WRITE_MSB_FIRST( 1 ),
-      .MISO_DATA_WIDTH( 8 ),
-      .READ_MSB_FIRST( 1 )
+      .MISO_DATA_WIDTH( MISO_DATA_WIDTH ),
+      .READ_MSB_FIRST( 1 ),
+      .INSTR_HEADER_LEN(INSTR_HEADER_LEN)
     ) SM1 (
       .clk(clk_20m),
       .nrst(rstn  ),
@@ -154,9 +173,11 @@ spi_master #(
       .clk_pin(spi_sclk),
       .ncs_pin(spi_cs_n),
       .mosi_pin(spi_mosi),
-      .oe_pin(spi_oe),
+      .oe_pin(spi_oe_n),
       .miso_pin(spi_miso)
     );
+
+assign spi_oe = ~spi_oe_n;
 
 IOBUF #(
     .DRIVE(12), // Specify the output drive strength
@@ -169,4 +190,13 @@ IOBUF #(
     .I(spi_mosi),     // Buffer input
     .T(spi_oe)      // 3-state enable input, high=input, low=output
    );
+
+ila_spi ila_spi_i (
+	.clk(spi_clk), // input wire clk
+	.probe0(spi_cs_n), // input wire [0:0]  probe0  
+	.probe1(spi_mosi), // input wire [0:0]  probe1 
+	.probe2(spi_oe), // input wire [0:0]  probe2 
+	.probe3(spi_miso), // input wire [0:0]  probe3 
+	.probe4(spi_sclk) // input wire [0:0]  probe4
+);
 endmodule

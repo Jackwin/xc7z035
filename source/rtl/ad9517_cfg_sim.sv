@@ -63,7 +63,7 @@ ad9517_cfg ad9517_cfg_i(
 spi_master #(
       .CPOL( 0 ),
       .FREE_RUNNING_SPI_CLK( 0 ),
-      .MOSI_DATA_WIDTH( 24 ),
+      .MOSI_DATA_WIDTH( 16 ),
       .WRITE_MSB_FIRST( 1 ),
       .MISO_DATA_WIDTH( 8 ),
       .READ_MSB_FIRST( 1 )
