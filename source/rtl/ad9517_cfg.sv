@@ -32,16 +32,19 @@ localparam  IDLE_s = 1,
 
 logic         cfg_start_r, cfg_start;
 logic         timeout;
-logic [5:0]   timer_cnt;
+logic [15:0]   timer_cnt;
 logic [6:0]   addr_next, addr;
 logic         rom_ena;
 logic [MOSI_DATA_WIDTH-1:0] rom_data;
 
-logic         spi_wr_cmd;
-logic         spi_rd_cmd;
+logic           spi_wr_cmd;
+logic           spi_rd_cmd;
 logic [MOSI_DATA_WIDTH-1:0]  spi_wr_data;
-logic [15:0]  spi_rd_data;
-logic [5:0]   spi_cfg_cnt, spi_cfg_cnt_next;  
+logic [15:0]    spi_rd_data;
+logic [5:0]     spi_cfg_cnt, spi_cfg_cnt_next;
+logic           cfg_done;
+logic           timer_ena;
+logic           timer_clr;
 
 always_comb begin
     o_spi_wr_cmd = spi_wr_cmd;
@@ -58,7 +61,7 @@ end
 always_ff @(posedge clk) begin
     if (rst) begin
         cs <= IDLE_s;
-        addr <= 'h1;
+        addr <= 'h0;
         spi_cfg_cnt <= 'h0;
     end
     else begin
@@ -72,13 +75,14 @@ always_comb begin
     ns = cs;
     addr_next = addr;
     spi_cfg_cnt_next = spi_cfg_cnt;
-    rom_ena = 1'b0;
+    //rom_ena = 1'b0;
     spi_rd_cmd = 1'b0;
     spi_wr_cmd = 1'b0;
     spi_wr_data = 0;
+    cfg_done = 0;
     case(cs)
     IDLE_s: begin
-        addr_next = 1;
+        addr_next = 0;
         if (cfg_start & ~i_spi_busy) begin
             ns = READ_ID_s;
         end
@@ -97,8 +101,7 @@ always_comb begin
     end
     RD_ROM_s: begin
         spi_cfg_cnt_next = spi_cfg_cnt + 1;
-        rom_ena = 1'b1;
-        addr_next = addr + 1;
+        //rom_ena = 1'b1;
         ns = DELAY_s;
     end
     DELAY_s: begin
@@ -112,7 +115,10 @@ always_comb begin
             ns = SPI_CFG_ACK_s;
     end
     SPI_CFG_ACK_s: begin
-        if (~i_spi_busy & spi_cfg_cnt != 6'd63) ns = RD_ROM_s;
+        if (~i_spi_busy & spi_cfg_cnt != 6'd63) begin
+            ns = RD_ROM_s;
+            addr_next = addr + 1;
+        end
         else if (~i_spi_busy & spi_cfg_cnt == 6'd63) ns = READ_CFG_s;
     end
     READ_CFG_s: begin
@@ -122,7 +128,12 @@ always_comb begin
     end
     CONFIRM_CFG_s: begin
         if (i_spi_rd_data[7:0] == 8'h01) begin
+            cfg_done = 1;
             ns = IDLE_s;            
+        end
+
+        if (timeout) begin
+            ns = IDLE_s;
         end
     end
 
@@ -142,9 +153,13 @@ end
 
 //end
 
-wire timer_ena = cs == SPI_CFG_s;
+
+always_comb begin
+    timer_ena = cs == SPI_CFG_s | cs == CONFIRM_CFG_s;
+    timer_clr = cs == IDLE_s | cs == RD_ROM_s;
+end
 always_ff @(posedge clk) begin
-    if (rst) begin
+    if (rst | timer_clr) begin
         timer_cnt <= 'h0;
         timeout <= 1'b0;
     end
@@ -153,6 +168,7 @@ always_ff @(posedge clk) begin
             timer_cnt <= timer_cnt + 1;
             if (&timer_cnt == 1'b1) begin
                 timeout <= 1'b1;
+                timer_cnt <= 0;
             end
         end
         else begin
@@ -164,7 +180,7 @@ end
 
 spi_config_rom spi_9517_config_rom (
   .clka(clk),    // input wire clka
-  .ena(rom_ena),      // input wire ena
+  .ena(1'b1),      // input wire ena
   .addra(addr),  // input wire [6 : 0] addra
   .douta(rom_data)  // output wire [31 : 0] douta
 );
@@ -181,7 +197,7 @@ ila_ad9517 your_instance_name (
 	.probe7(timer_cnt), // input wire [5:0]  probe7 
 	.probe8(addr), // input wire [6:0]  probe8 
 	.probe9(timeout), // input wire [0:0]  probe9 
-	.probe10(rom_ena) // input wire [0:0]  probe10
+	.probe10(timer_ena) // input wire [0:0]  probe10
 );
 
 

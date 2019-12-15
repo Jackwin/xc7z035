@@ -25,7 +25,9 @@ spi_master #(
   .MOSI_DATA_WIDTH( 8 ),
   .WRITE_MSB_FIRST( 1 ),
   .MISO_DATA_WIDTH( 8 ),
-  .READ_MSB_FIRST( 1 )
+  .READ_MSB_FIRST( 1 ),
+  .INSTR_HEADER_LEN(8)
+
 ) SM1 (
   .clk(  ),
   .nrst(  ),
