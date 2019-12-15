@@ -155,7 +155,7 @@ end
 
 
 always_comb begin
-    timer_ena = cs == SPI_CFG_s | cs == CONFIRM_CFG_s;
+    timer_ena = cs == CONFIRM_CFG_s;
     timer_clr = cs == IDLE_s | cs == RD_ROM_s;
 end
 always_ff @(posedge clk) begin
