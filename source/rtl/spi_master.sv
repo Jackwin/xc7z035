@@ -61,7 +61,7 @@ module spi_master #( parameter
     bit [5:0] MISO_DATA_WIDTH = 8, // data word width in bits
     bit READ_MSB_FIRST = 1,         // 0 - LSB first
                                  // 1 - MSB first
-    bit [5:0] INSTR_HEADER_LEN = 8 // The instruction header length in read operation
+    bit [5:0] INSTR_HEADER_LEN = 8 // The instruction header length(R/W + ADDR) in read operation
                                     // It should be no more than MOSI_DATA_WIDTH
 )(
   input clk,                     // system clock

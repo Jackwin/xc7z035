@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 module ad9517_cfg # (parameter
-    bit [4:0] MOSI_DATA_WIDTH = 16,
+    bit [4:0] MOSI_DATA_WIDTH = 24,
     bit [4:0] MISO_DATA_WIDTH = 8
     )
      (
@@ -58,7 +58,7 @@ end
 always_ff @(posedge clk) begin
     if (rst) begin
         cs <= IDLE_s;
-        addr <= 'h0;
+        addr <= 'h1;
         spi_cfg_cnt <= 'h0;
     end
     else begin
@@ -78,6 +78,7 @@ always_comb begin
     spi_wr_data = 0;
     case(cs)
     IDLE_s: begin
+        addr_next = 1;
         if (cfg_start & ~i_spi_busy) begin
             ns = READ_ID_s;
         end
@@ -95,9 +96,9 @@ always_comb begin
         else ns = CHECK_ID_s;
     end
     RD_ROM_s: begin
-        addr_next = addr + 1;
         spi_cfg_cnt_next = spi_cfg_cnt + 1;
         rom_ena = 1'b1;
+        addr_next = addr + 1;
         ns = DELAY_s;
     end
     DELAY_s: begin
@@ -107,11 +108,12 @@ always_comb begin
         spi_wr_cmd = 1'b1;
         spi_wr_data = rom_data;
         //spi_wr_data = 0;
-        ns = SPI_CFG_ACK_s;
+        if (~i_spi_busy)
+            ns = SPI_CFG_ACK_s;
     end
     SPI_CFG_ACK_s: begin
-        if (~i_spi_busy & spi_cfg_cnt != 6'd62) ns = RD_ROM_s;
-        else if (~i_spi_busy & spi_cfg_cnt == 6'd62) ns = READ_CFG_s;
+        if (~i_spi_busy & spi_cfg_cnt != 6'd63) ns = RD_ROM_s;
+        else if (~i_spi_busy & spi_cfg_cnt == 6'd63) ns = READ_CFG_s;
     end
     READ_CFG_s: begin
         spi_rd_cmd = 1'b1;

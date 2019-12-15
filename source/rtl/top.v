@@ -62,7 +62,7 @@ wire        clk_20m;
 wire        spi_mosi;
 wire        spi_miso;
 wire        spi_oe, spi_oe_n;
-reg [4:0]   cnt;
+reg [5:0]   cnt;
 wire        spi_clk;
 wire        spi_wr_cmd;
 wire        spi_rd_cmd;
@@ -151,7 +151,7 @@ always @(posedge clk_20m) begin
     end
 end
 
-assign spi_clk = cnt[4];
+assign spi_clk = cnt[5];
 
 spi_master #(
       .CPOL( 0 ),
