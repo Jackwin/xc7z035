@@ -46,7 +46,11 @@ module top (
 
     //output          spi_cs_n,
     output          spi_sclk,
-    inout           spi_sdio
+    inout           spi_sdio,
+
+    // iic
+    inout           iic_sda,
+    inout           iic_scl
 );
 localparam MOSI_DATA_WIDTH = 24;
 localparam MISO_DATA_WIDTH = 8;
@@ -97,7 +101,7 @@ assign c_pl_led141 = 1'b0;
     .locked(locked),       // output locked
    // Clock in ports
     .clk50m_in(clk50m_in)); 
-/*
+
 system bd_system(
     .rgmii_eth_rd(rgmii_eth_rd),
     .rgmii_eth_rx_ctl(rgmii_eth_rx_ctl),
@@ -110,7 +114,7 @@ system bd_system(
     .eth_mdio_mdio_o(mdio_o),
     .eth_mdio_mdio_t(mdio_t)
     );
-*/
+
 
 ila_0 ila_clk (
 	.clk(clk50m_in), // input wire clk

@@ -119,6 +119,13 @@ set_property PACKAGE_PIN AD15  [get_ports spi_sdio]
 set_property IOSTANDARD LVCMOS18 [get_ports spi_sclk]
 set_property IOSTANDARD LVCMOS18 [get_ports spi_sdio]
 
+### IIC
+set_property PACKAGE_PIN AC12  [get_ports iic_sda]
+set_property PACKAGE_PIN AE10  [get_ports iic_scl]
+set_property IOSTANDARD LVCMOS18 [get_ports iic_sda]
+set_property IOSTANDARD LVCMOS18 [get_ports iic_scl]
+
+
 ### LED bottom board
 #set_property PACKAGE_PIN E11  [get_ports b_pl_led1]
 #set_property PACKAGE_PIN C12  [get_ports b_pl_led2]
