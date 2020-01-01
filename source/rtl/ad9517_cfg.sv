@@ -185,7 +185,7 @@ spi_config_rom spi_9517_config_rom (
   .douta(rom_data)  // output wire [31 : 0] douta
 );
 
-ila_ad9517 your_instance_name (
+ila_ad9517 ila_ad9517_i (
 	.clk(clk), // input wire clk
 	.probe0(cs), // input wire [2:0]  probe0  
 	.probe1(spi_wr_data), // input wire [23:0]  probe1 

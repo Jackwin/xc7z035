@@ -25,7 +25,7 @@ module top (
     input           adc0_dco_p,
     input           adc0_dco_n,
     output          adc0_pd_n,
-    output          adc0_cs_n,
+    output reg      adc0_cs_n,
     //ADC1 
     input [5:0]     adc1_din_p,
     input [5:0]     adc1_din_n,
@@ -41,7 +41,7 @@ module top (
     output          ad9517_pd_n,
     output          ad9517_ref_sel,
     output          ad9517_sync_n,
-    output          ad9517_cs_n,
+    output reg      ad9517_cs_n,
 
 
     //output          spi_cs_n,
@@ -68,11 +68,11 @@ wire        spi_miso;
 wire        spi_oe, spi_oe_n;
 reg [5:0]   cnt;
 wire        spi_clk;
-wire        spi_wr_cmd;
-wire        spi_rd_cmd;
+reg         spi_wr_cmd;
+reg         spi_rd_cmd;
 wire        spi_busy;
-wire [23:0] spi_wr_data;
-wire [7:0]  spi_rd_data;
+reg [MOSI_DATA_WIDTH-1:0] spi_wr_data;
+wire [MISO_DATA_WIDTH:0]  spi_rd_data;
 reg         cfg_start;
 wire        cfg_start_vio;
 reg         cfg_start_r;
@@ -83,8 +83,12 @@ assign mdio_i = eth_mdio;
 assign ad9517_reset_n = 1'b1;
 assign ad9517_pd_n = 1'b1;
 assign ad9517_ref_sel = 1'b0; // Not used in differential clock. Controlled by REG 0x1c
-assign ad9517_cs_n = spi_cs_n;
+//assign ad9517_cs_n = spi_cs_n;
 assign ad9517_sync_n = 1'b1;
+
+// ADC0
+
+assign adc0_pd_n = 1'b1;
 
 // LED
 
@@ -103,6 +107,7 @@ assign c_pl_led141 = 1'b0;
     .clk50m_in(clk50m_in)); 
 
 system bd_system(
+/*
     .rgmii_eth_rd(rgmii_eth_rd),
     .rgmii_eth_rx_ctl(rgmii_eth_rx_ctl),
     .rgmii_eth_rxc(rgmii_eth_rxc),
@@ -113,37 +118,77 @@ system bd_system(
     .eth_mdio_mdio_i(mdio_i),
     .eth_mdio_mdio_o(mdio_o),
     .eth_mdio_mdio_t(mdio_t)
+    */
     );
 
-
-ila_0 ila_clk (
-	.clk(clk50m_in), // input wire clk
-	.probe0(locked) // input wire [0:0] probe0
-);
 
 always @(posedge clk_20m) begin
     cfg_start_r <= cfg_start_vio;
     cfg_start <= ~cfg_start_vio & cfg_start_r;
 end
 
-vio_0 vio_0_cfg (
-  .clk(clk_200m),                // input wire clk
-  .probe_out0(cfg_start_vio)  // output wire [0 : 0] probe_out0
-);
 
-system_wrapper system_wrapper_i();
+
+//system_wrapper system_wrapper_i();
+
+wire    ad9517_spi_wr_cmd;
+wire    ad9517_spi_rd_cmd;
+wire [MOSI_DATA_WIDTH-1:0] ad9517_spi_wr_data;
+wire [MISO_DATA_WIDTH:0]  ad9517_spi_rd_data;
+wire    ad9517_spi_busy;
+wire    ad9517_cfg_start;
+wire    ad9517_cfg_go;
 
 ad9517_cfg ad9517_cfg_i(
     .clk(clk_20m),
     .rst(~rstn),
-    .o_spi_wr_cmd(spi_wr_cmd),
-    .o_spi_rd_cmd(spi_rd_cmd),
-    .o_spi_wr_data(spi_wr_data),
-    .i_spi_rd_data(spi_rd_data),
-    .i_spi_busy(spi_busy),
-    .i_cfg_start(cfg_start)
+    .o_spi_wr_cmd(ad9517_spi_wr_cmd),
+    .o_spi_rd_cmd(ad9517_spi_rd_cmd),
+    .o_spi_wr_data(ad9517_spi_wr_data),
+    .i_spi_rd_data(ad9517_spi_rd_data),
+    .i_spi_busy(ad9517_spi_busy),
+    .i_cfg_start(ad9517_cfg_start)
 );
 
+assign ad9517_spi_rd_data = spi_rd_data;
+assign ad9517_spi_busy = spi_busy;
+
+wire    adc0_spi_wr_cmd;
+wire    adc0_spi_rd_cmd;
+wire [MOSI_DATA_WIDTH-1:0] adc0_spi_wr_data;
+wire [MISO_DATA_WIDTH:0]  adc0_spi_rd_data;
+wire    adc0_spi_busy;
+wire    adc0_cfg_start;
+wire    adc0_cfg_go;
+
+adc_cfg adc0_cfg(
+    .clk(clk_20m),
+    .rst(~rstn),
+    .o_spi_wr_cmd(adc0_spi_wr_cmd),
+    .o_spi_rd_cmd(adc0_spi_rd_cmd),
+    .o_spi_wr_data(adc0_spi_wr_data),
+    .i_spi_rd_data(adc0_spi_rd_data),
+    .i_spi_busy(adc0_spi_busy),
+    .i_cfg_start(adc0_cfg_start),
+    .o_cfg_go(adc0_cfg_go)
+);
+
+assign adc0_spi_rd_data = spi_rd_data;
+assign adc0_spi_busy = spi_busy;
+
+always @(*) begin
+    spi_wr_cmd = ad9517_spi_wr_cmd;
+    spi_rd_cmd = ad9517_spi_rd_cmd;
+    spi_wr_data = ad9517_spi_wr_data;
+    ad9517_cs_n = spi_cs_n;
+
+    if (adc0_cfg_go) begin
+        spi_wr_cmd = adc0_spi_wr_cmd;
+        spi_rd_cmd = ad9517_spi_rd_cmd;
+        spi_wr_data = ad9517_spi_wr_data;
+        adc0_cs_n = spi_cs_n;
+    end
+end
 
 
 always @(posedge clk_20m) begin
@@ -202,5 +247,11 @@ ila_spi ila_spi_i (
 	.probe2(spi_oe), // input wire [0:0]  probe2 
 	.probe3(spi_miso), // input wire [0:0]  probe3 
 	.probe4(spi_sclk) // input wire [0:0]  probe4
+);
+
+vio_0 vio_0_cfg (
+  .clk(clk_200m),                // input wire clk
+  .probe_out0(ad9517_cfg_start),  // output wire [0 : 0] probe_out0
+  .probe_out1(adc0_cfg_start)  // output wire [0 : 0] probe_out1
 );
 endmodule
