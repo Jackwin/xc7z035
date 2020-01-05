@@ -177,16 +177,18 @@ assign adc0_spi_rd_data = spi_rd_data;
 assign adc0_spi_busy = spi_busy;
 
 always @(*) begin
-    spi_wr_cmd = ad9517_spi_wr_cmd;
-    spi_rd_cmd = ad9517_spi_rd_cmd;
-    spi_wr_data = ad9517_spi_wr_data;
-    ad9517_cs_n = spi_cs_n;
-
     if (adc0_cfg_go) begin
         spi_wr_cmd = adc0_spi_wr_cmd;
         spi_rd_cmd = ad9517_spi_rd_cmd;
         spi_wr_data = ad9517_spi_wr_data;
         adc0_cs_n = spi_cs_n;
+    end
+    else begin
+        spi_wr_cmd = adc0_spi_wr_cmd;
+        spi_rd_cmd = ad9517_spi_rd_cmd;
+        spi_wr_data = ad9517_spi_wr_data;
+        adc0_cs_n = spi_cs_n;
+        adc0_cs_n = 1'b1;
     end
 end
 
