@@ -4,16 +4,20 @@
 `define RD  8'h0010_0000
 `define WR  8'h0001_0000
 `define ACK 8'h0000_1000
+`define CLK_PERIOD 50
 module i2c_sim();
 
-localparam  CLK_PERIOD = 50; //20M
+
 logic       sys_clk;
 logic       sys_rst;
+wire       sda;
+wire       scl;
+logic [7:0] myreg;
 
 initial begin
-    clk = 0;
+    sys_clk = 0;
     forever begin
-        #CLK_PERIOD/2 sys_clk = ~sys_clk;
+        # (`CLK_PERIOD/2) sys_clk = ~sys_clk;
     end
 end
 
@@ -22,7 +26,7 @@ initial begin
     #140;
     sys_rst = 0;
 end
-
+/*
 localparam  IDLE_s = 3'b000,
             CFG_PRE_L_s = 3'b001,
             CFG_PRE_H_s = 3'b010,
@@ -31,6 +35,25 @@ localparam  IDLE_s = 3'b000,
             CFG_RXR_s = 3'b101,
             CFG_CR_s = 3'b110,
             CFG_SR_s = 3'b111;
+*/
+
+localparam  IDLE_s = 4'd0,
+            PRE_L_s = 4'd1,
+            PRE_H_s = 4'd2,
+            WR_CTR_s = 4'd3,
+            WR_CMD_s = 4'd4,
+            WR_CR_s = 4'd5,
+            WR_SR_s = 4'd6,
+            WR_END_s = 4'd7,
+
+            RD_CTR_s = 4'd8,
+            RD_CMD_s = 4'd9,
+            RD_CR_s = 4'd10,
+            RD_STOP_s = 4'd11,
+            RD_DATA_s = 4'd12,
+            RD_END_s = 4'd13;
+
+/*
 
 localparam  WR_IDLE_s = 3'd0,
             WR_PRE_L_s = 3'd1,
@@ -41,25 +64,28 @@ localparam  WR_IDLE_s = 3'd0,
             WR_SR_s = 3'd6,
             WR_END_s = 3'd7;
 
-localparam  RD_IDLE_s = 3'd0,
-            RD_PRE_L_s = 3'd1,
-            RD_PRE_H_s = 3'd2,
-            RD_CTR_s = 3'd3,
-            RD_CMD_s = 3'd4,
-            RD_CR_s = 3'd5,
-            RD_STOP_s = 3'd6,
-            RD_DATA_s = 3'd7;
+localparam  RD_IDLE_s = 4'd0,
+            RD_PRE_L_s = 4'd1,
+            RD_PRE_H_s = 4'd2,
+            RD_CTR_s = 4'd3,
+            RD_CMD_s = 4'd4,
+            RD_CR_s = 4'd5,
+            RD_STOP_s = 4'd6,
+            RD_DATA_s = 4'd7,
+            RD_END_s = 4'd8;
+*/
 
 localparam SCL_FRE = 100; //KHz
 localparam WB_CLK_FRE = 20; //MHz
 localparam PRE = 20 * 1000 / (5 * SCL_FRE) - 1; 
-localparam SLAVE_ADDR = 7'b0001100;
+localparam SLAVE_ADDR = 7'b0001100; //0C
 
 localparam PRE_L_ADDR = 3'd0;
 localparam PRE_H_ADDR = 3'd1;
 localparam CTR_ADDR = 3'd2;
 localparam TXR_RXR_ADDR = 3'd3;
 localparam CR_SR_ADDR = 3'd4;
+
 
 logic [7:0]     iic_wr_data;
 logic [7:0]     iic_wr_addr;
@@ -91,11 +117,12 @@ logic           sda_pad_i;
 logic           sda_pad_o;
 logic           sda_padoen_o;
 
-logic [2:0]     cs, ns;
-logic [2:0]     wr_cs, wr_ns;
-logic [2:0]     rd_cs, rd_ns;
-logic [1:0]     cnt;
+logic [3:0]     cs, ns;
+//logic [2:0]     wr_cs, wr_ns;
+//logic [3:0]     rd_cs, rd_ns;
+//logic [1:0]     cnt;
 logic           wr_slave_flag;
+logic           wr_cmd_flag;
 logic           wr_addr_flag;
 logic           wr_data_flag;
 logic           rd_slave_flag;
@@ -103,29 +130,56 @@ logic           rd_cmd_flag;
 logic           rd_addr_flag;
 logic           rd_data_flag;
 
+initial begin
+    iic_wr_req <= 0;
+    iic_rd_req <= 0;
+    #250;
+    @(posedge sys_clk);
+    iic_wr_req <= 1;
+    wait(iic_wr_ack);
+    @(posedge sys_clk)
+        iic_wr_req <= 0;
+    
+    #2000;
+    iic_rd_req <= 0;
+    #250;
+    @(posedge sys_clk);
+    iic_rd_req <= 1;
+    wait(iic_rd_ack);
+    @(posedge sys_clk)
+        iic_rd_req <= 0;
+    
+    #2000;
+    $stop;
+
+end
+    
+
+
 always_ff @(posedge sys_clk) begin
-    if (sys_rst) begin
-        iic_wr_ack <= 0;
-    end
-    else begin
-        iic_wr_ack <= iic_wr_strobe & ~iic_wr_ack & (cs == IDLE_s);
-    end
+    iic_wr_ack <= iic_wr_req & ~iic_wr_ack & (cs == IDLE_s);
 end
 
+always_ff @(posedge sys_clk) begin
+    iic_rd_ack <= iic_rd_req & (cs == IDLE_s) & ~iic_rd_ack;
+end
+
+
+/*
 always_ff @(posedge sys_clk) begin
     if (sys_rst) begin
         iic_wr_go <= 0;
         iic_rd_go <= 0;
     end
     else begin
-        if (iic_wr_strobe & (cs == IDLE_s)) begin
+        if (iic_wr_req & (cs == IDLE_s)) begin
             iic_wr_go <= 1;
         end
         else if (cs == END_s) begin
             iic_wr_go <= 0;
         end
 
-        if (iic_rd_strobe & (cs == IDLE_s)) begin
+        if (iic_rd_req & (cs == IDLE_s)) begin
             iic_rd_go <= 1;
         end
         else if (cs == END_s) begin
@@ -133,88 +187,162 @@ always_ff @(posedge sys_clk) begin
         end
     end
 end
+*/
 
 always_ff @(posedge sys_clk) begin
     if (sys_rst) begin
-        wr_cs <= WR_IDLE_s;
+        iic_wr_go <= 0;
+        iic_rd_go <= 0;
     end
     else begin
-        wr_cs <= wr_ns;
+        if (iic_wr_req & iic_wr_ack) begin
+            iic_wr_go <= 1;
+        end 
+        else if (cs == WR_END_s) begin
+            iic_wr_go <= 0;
+        end
+
+        if (iic_rd_req & iic_rd_ack) begin
+            iic_rd_go <= 1;
+        end
+        else if (cs == RD_END_s) begin
+            iic_rd_go <= 0;
+        end
+    end
+end
+
+
+always_ff @(posedge sys_clk) begin
+    if (sys_rst) begin
+        cs <= IDLE_s;
+    end
+    else begin
+        cs <= ns;
     end
 end
 
 always_comb begin
-    wr_ns = wr_cs;
-    case(wr_cs) 
-        WR_IDLE_s: begin
-            if (iic_wr_req) begin
-                wr_ns = WR_PRE_L_s;
+    ns = cs;
+    case(cs) 
+        IDLE_s: begin
+            if (iic_wr_req | iic_rd_req) begin
+                ns = PRE_L_s;
             end
         end
-        WR_PRE_L_s: begin
+        PRE_L_s: begin
             if (wb_ack) begin
-                wr_ns = WR_PRE_H_s;
+                ns = PRE_H_s;
             end
         end
-        WR_PRE_H_s: begin
-            if (wb_ack) begin
-                wr_ns = WR_CTR_s;
+        PRE_H_s: begin
+            if (wb_ack & iic_wr_go) begin
+                ns = WR_CTR_s;
+            end
+            else if (wb_ack & iic_rd_go) begin
+                ns = RD_CTR_s;
             end
         end
         WR_CTR_s: begin
             if (wb_ack) begin
-               wr_ns = WR_CMD_s；
+               ns = WR_CMD_s;
             end
         end
         WR_CMD_s: begin
             if (wb_ack) begin
-                wr_ns = WR_CR_s;
+                ns = WR_CR_s;
             end
         end
         WR_CR_s: begin
             if (wb_intr & wr_slave_flag & wr_addr_flag & wr_cmd_flag) begin
-                wr_ns = WR_SR_s;
+                ns = WR_SR_s;
             end
             else if (wb_intr) begin
-                wr_ns = WR_CMD_s;
+                ns = WR_CMD_s;
             end
         end
         WR_SR_s: begin
             if (wb_rd_data[7] == 1'b0 ) begin
-                wr_ns = WR_END_s;
+                ns = WR_END_s;
             end
         end
         WR_END_s: begin
-            wr_ns = WR_IDLE_s;
+            ns = IDLE_s;
         end
-        default: wr_ns = WR_IDLE_s;
+
+        RD_CTR_s: begin
+            if (wb_ack) begin
+               ns = RD_CMD_s;
+            end
+        end
+        RD_CMD_s: begin
+            /*
+            if (wb_ack & (~(rd_slave_flag & rd_cmd_flag & rd_data_flag))) begin
+                ns = RD_CR_s;
+            end
+            */
+            if (wb_ack) begin
+                ns = RD_CR_s;
+            end   
+        end
+        RD_CR_s: begin
+            if (wb_intr & (~(rd_slave_flag & rd_cmd_flag & rd_data_flag))) begin
+                ns = RD_CMD_s;
+            end
+            else if (wb_intr) begin
+                ns = RD_STOP_s;
+            end
+        end
+        RD_STOP_s: begin
+            if (wb_ack) begin
+                ns = RD_DATA_s;
+            end  
+        end
+        RD_DATA_s: begin
+            if (wb_ack) begin
+                ns = RD_END_s;
+            end
+        end
+        RD_END_s: begin
+            ns = IDLE_s;
+        end
+        default: ns = IDLE_s;
     endcase
 end
 
 always_ff @(posedge sys_clk) begin
     if (sys_rst) begin
-        wr_slave_flga <= 0;
+        wr_slave_flag <= 0;
         wr_addr_flag <= 0;
         wr_data_flag <= 0;
+        rd_cmd_flag <= 0;
+        rd_data_flag <= 0;
+        rd_addr_flag <= 0;
         wb_we <= 0;
         wb_stb <= 0;
         wb_cyc <= 0;
         iic_wr_done <= 0;
+        iic_rd_done <= 0;
     end
     else begin
-        case(wr_cs)
-            WR_IDLE_s: begin
+        case(cs)
+            IDLE_s: begin
                 wr_slave_flag <= 0;
+                wr_cmd_flag <= 0;
                 wr_addr_flag <= 0;
                 wr_data_flag <= 0;
+                rd_cmd_flag <= 0;
+                rd_data_flag <= 0;
+                rd_addr_flag <= 0;
+
                 wb_addr <= 0;
                 wb_wr_data <= 0;
                 wb_we <= 0;
                 wb_stb <= 0;
                 wb_cyc <= 0;
                 iic_wr_done <= 0;
+                iic_rd_done <= 0;
             end
-            WR_PRE_L_s: begin
+            PRE_L_s: begin
                 wb_addr <= PRE_L_ADDR;
                 wb_wr_data <= PRE & 8'hff;
                 wb_we <= 1;
@@ -226,7 +354,7 @@ always_ff @(posedge sys_clk) begin
                     wb_cyc <= 0;
                 end
             end
-            WR_PRE_H_s: begin
+            PRE_H_s: begin
                 wb_addr <= PRE_H_ADDR;
                 wb_wr_data <= (PRE & 8'hff00) >> 8;
                 wb_we <= 1;
@@ -311,15 +439,100 @@ always_ff @(posedge sys_clk) begin
             WR_END_s: begin
                 iic_wr_done <= 1;
             end
+
+            RD_CTR_s: begin
+                wb_addr <= CTR_ADDR;
+                wb_wr_data <= 8'hc0; // Enable the core and enable the interrupt
+                wb_we <= 1;
+                wb_stb <= 1;
+                wb_cyc <= 1;
+                if (wb_ack) begin
+                    wb_we <= 0;
+                    wb_stb <= 0;
+                    wb_cyc <= 0;
+                end
+            end
+            RD_CMD_s: begin
+                if (~rd_slave_flag) begin // Select device
+                    wb_addr <= TXR_RXR_ADDR;
+                    wb_wr_data <= {SLAVE_ADDR,1'b0}; 
+                end
+                else if (~rd_addr_flag) begin // config address
+                    wb_addr <= TXR_RXR_ADDR;
+                    wb_wr_data <= iic_rd_addr; 
+                end
+                else if (~rd_cmd_flag) begin
+                    wb_addr <= TXR_RXR_ADDR;
+                    wb_wr_data <= {SLAVE_ADDR,1'b1}; 
+                end
+                wb_we <= 1;
+                wb_stb <= 1;
+                wb_cyc <= 1;
+                if (wb_ack) begin
+                    rd_addr_flag <= 1; 
+                    wb_we <= 0;
+                    wb_stb <= 0;
+                    wb_cyc <= 0;
+                end
+            end
+            RD_CR_s: begin
+                if (rd_slave_flag & ~rd_addr_flag ) begin
+                    wb_addr <= CR_SR_ADDR;
+                    wb_wr_data <= `STA | `WR; 
+                end
+                else if (rd_addr_flag) begin
+                    wb_addr <= CR_SR_ADDR;
+                    wb_wr_data <= `WR; 
+                end
+                else if (rd_cmd_flag) begin
+                    wb_addr <= CR_SR_ADDR;
+                    wb_wr_data <= `STA | `WR; 
+                end
+                wb_we <= 1;
+                wb_stb <= 1;
+                wb_cyc <= 1;
+                if (wb_ack) begin
+                    wb_we <= 0;
+                    wb_stb <= 0;
+                    wb_cyc <= 0;
+                end
+            end
+            RD_STOP_s: begin
+                wb_addr <= CR_SR_ADDR;
+                wb_wr_data <= `RD| `ACK | `STO;
+                wb_we <= 1;
+                wb_stb <= 1;
+                wb_cyc <= 1;
+                if (wb_ack) begin
+                    wb_we <= 0;
+                    wb_stb <= 0;
+                    wb_cyc <= 0;
+                end
+            end
+            RD_DATA_s: begin
+                wb_addr <= TXR_RXR_ADDR;
+                wb_we <= 0;
+                wb_stb <= 1;
+                wb_cyc <= 1;
+                if (wb_ack) begin 
+                    wb_we <= 0;
+                    wb_stb <= 0;
+                    wb_cyc <= 0;
+                end
+            end
+
+            RD_END_s: begin
+                iic_rd_done <= 1;
+            end
+
         endcase
     end
 end
 
 
-always_ff @(posedge sys_clk) begin
-    iic_rd_ack <= iic_wr_req & (rd_cs == RD_IDLE_s) & ~iic_rd_ack;
-end
 
+
+/*
 always_ff @(posedge sys_clk) begin
     if (sys_rst) begin
         rd_cs <= RD_IDLE_s;
@@ -349,15 +562,10 @@ always_comb begin
         end
         RD_CTR_s: begin
             if (wb_ack) begin
-               rd_ns = RD_CMD_s；
+               rd_ns = RD_CMD_s;
             end
         end
         RD_CMD_s: begin
-            /*
-            if (wb_ack & (~(rd_slave_flag & rd_cmd_flag & rd_data_flag))) begin
-                rd_ns = RD_CR_s;
-            end
-            */
             if (wb_ack) begin
                 rd_ns = RD_CR_s;
             end   
@@ -386,6 +594,8 @@ always_comb begin
         default: rd_ns = RD_IDLE_s;
     endcase
 end
+*/
+/*
 always_ff @(posedge sys_clk) begin
     if (sys_rst) begin
         rd_slave_flag <= 0;
@@ -401,6 +611,7 @@ always_ff @(posedge sys_clk) begin
             RD_IDLE_s: begin
                 rd_cmd_flag <= 0;
                 rd_data_flag <= 0;
+                rd_addr_flag <= 0;
                 wb_addr <= 0;
                 wb_wr_data <= 0;
                 wb_we <= 0;
@@ -468,7 +679,7 @@ always_ff @(posedge sys_clk) begin
                 end
             end
             RD_CR_s: begin
-                if (rd_slave_flag %& ~rd_addr_flag ) begin
+                if (rd_slave_flag & ~rd_addr_flag ) begin
                     wb_addr <= CR_SR_ADDR;
                     wb_wr_data <= `STA | `WR; 
                 end
@@ -524,7 +735,7 @@ always_ff @(posedge sys_clk) begin
         endcase
     end
 end
-
+*/
 
 i2c_master_top  #(
     .ARST_LVL(1'b1)
@@ -540,14 +751,48 @@ i2c_master_top  #(
     .wb_cyc_i(wb_cyc),
     .wb_ack_o(wb_ack),
     .wb_inta_o(wb_intr),
-
-    .scl_pad_i(scl_pad_i),
+/*
+    .scl_pad_i(scl),
     .scl_pad_o(scl_pad_o),
     .scl_padoen_o(scl_padoen_o),
 
-    .sda_pad_i(sda_pad_i),
+    .sda_pad_i(sda),
     .sda_pad_o(sda_pad_o),
     .sda_padoen_o(sda_padoen_o)
+*/
+    .sda(sda),
+    .scl(scl)
+);
+
+/*
+ OBUFT #(
+      .DRIVE(12),   // Specify the output drive strength
+      .IOSTANDARD("DEFAULT"), // Specify the output I/O standard
+      .SLEW("SLOW") // Specify the output slew rate
+ ) scl_OBUFT_inst (
+      .O(scl),     // Buffer output (connect directly to top-level port)
+      .I(scl_pad_o),     // Buffer input
+      .T(scl_padoen_o)      // 3-state enable input 
+   );
+
+
+    OBUFT #(
+      .DRIVE(12),   // Specify the output drive strength
+      .IOSTANDARD("DEFAULT"), // Specify the output I/O standard
+      .SLEW("SLOW") // Specify the output slew rate
+ ) sda_OBUFT_inst (
+      .O(sda),     // Buffer output (connect directly to top-level port)
+      .I(sda_pad_o),     // Buffer input
+      .T(sda_padoen_o)      // 3-state enable input 
+   );
+*/
+
+i2cSlaveTop i2cSlaveTop_i (
+    .clk(sys_clk),
+    .rst(sys_rst),
+    .sda(sda),
+    .scl(scl),
+    .myReg0(myreg)
 
 );
 
