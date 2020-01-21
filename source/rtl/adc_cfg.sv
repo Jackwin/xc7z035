@@ -33,7 +33,7 @@ localparam FLEX_OUTPUT_DELAY = 8'h0;
 localparam FLEX_OUTPUT_DELAY_ADDR = 8'h17;
 localparam FLEX_VREF = 8'h1C; //internal Vref, 1.6V input voltage range
 localparam FLEX_VREF_ADDR = 8'h18;
-localparam OVR_CFG = 8'h07; //OVR PIN 21,22
+localparam OVR_CFG = 8'h03; //OVR PIN 21,22
 localparam OVR_CFG_ADDR = 8'h2A;
 localparam INPUT_COUPLING = 8'h00; // AC coupling
 localparam INPUT_COUPLING_ADDR = 8'h2C;
@@ -53,10 +53,12 @@ localparam  IDLE_s = 1,
 logic           cfg_start_r, cfg_start;
 logic           timeout;
 logic [15:0]    timer_cnt;
+logic [6:0]     addr_next, addr;
 logic           spi_wr_cmd;
 logic           spi_rd_cmd;
 logic [MOSI_DATA_WIDTH-1:0]  spi_wr_data;
 logic [15:0]    spi_rd_data;
+logic [3:0]     spi_cfg_cnt, spi_cfg_cnt_next;
 logic           cfg_done;
 logic           timer_ena;
 logic           timer_clr;
@@ -102,10 +104,49 @@ always_comb begin
     end
     CHECK_ID_s: begin
         if (i_spi_rd_data[7:0] == AD9434_ID) begin
-            ns = IDLE_s;            
+            //ns = IDLE_s;
+            ns = RD_ROM_s;
         end
         else if (timeout) ns = IDLE_s;
         else ns = CHECK_ID_s;
+    end
+
+    RD_ROM_s: begin
+        spi_cfg_cnt_next = spi_cfg_cnt + 1;
+        //rom_ena = 1'b1;
+        ns = DELAY_s;
+    end
+    DELAY_s: begin
+        if (~i_spi_busy) ns = SPI_CFG_s;
+    end
+    SPI_CFG_s: begin
+        spi_wr_cmd = 1'b1;
+        spi_wr_data = rom_data;
+        //spi_wr_data = 0;
+        if (~i_spi_busy)
+            ns = SPI_CFG_ACK_s;
+    end
+    SPI_CFG_ACK_s: begin
+        if (~i_spi_busy & spi_cfg_cnt != 4'd9) begin
+            ns = RD_ROM_s;
+            addr_next = addr + 1;
+        end
+        else if (~i_spi_busy & spi_cfg_cnt == 4'd9) ns = READ_CFG_s;
+    end
+    READ_CFG_s: begin
+        spi_rd_cmd = 1'b1;
+        spi_wr_data = 24'h00802A;
+        ns = CONFIRM_CFG_s;
+    end
+    CONFIRM_CFG_s: begin
+        if (i_spi_rd_data[7:0] == 8'h03) begin
+            cfg_done = 1;
+            ns = IDLE_s;            
+        end
+
+        if (timeout) begin
+            ns = IDLE_s;
+        end
     end
     default: ns = IDLE_s;
     endcase
@@ -136,6 +177,14 @@ always_ff @(posedge clk) begin
 
     end
 end
+
+spi_config_rom spi_ad9434_config_rom (
+  .clka(clk),    // input wire clka
+  .ena(1'b1),      // input wire ena
+  .addra(addr),  // input wire [6 : 0] addra
+  .douta(rom_data)  // output wire [31 : 0] douta
+);
+
 
 ila_ad9517 ila_adc_i (
 	.clk(clk), // input wire clk
