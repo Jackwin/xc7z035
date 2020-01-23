@@ -78,15 +78,21 @@ end
 always_ff @(posedge clk) begin
     if (rst) begin
         cs <= IDLE_s;
+        addr <= 'h0;
+        spi_cfg_cnt <= 'h0;
     end
     else begin
         cs <= ns;
+        addr <= addr_next;
+        spi_cfg_cnt <= spi_cfg_cnt_next;
     end
 end
 
 
 always_comb begin
     ns = cs;
+    addr_next = addr;
+    spi_cfg_cnt_next = spi_cfg_cnt;
     spi_rd_cmd = 1'b0;
     spi_wr_cmd = 1'b0;
     spi_wr_data = 0;
@@ -178,7 +184,7 @@ always_ff @(posedge clk) begin
     end
 end
 
-spi_config_rom spi_ad9434_config_rom (
+ad9434_cfg_rom ad9434_cfg_rom_i (
   .clka(clk),    // input wire clka
   .ena(1'b1),      // input wire ena
   .addra(addr),  // input wire [6 : 0] addra
