@@ -78,8 +78,8 @@
 module i2c_master_top(
 	wb_clk_i, wb_rst_i, arst_i, wb_adr_i, wb_dat_i, wb_dat_o,
 	wb_we_i, wb_stb_i, wb_cyc_i, wb_ack_o, wb_inta_o,
-	scl, sda);
-	//scl_pad_i, scl_pad_o, scl_padoen_o, sda_pad_i, sda_pad_o, sda_padoen_o );
+	//scl, sda);
+	scl_pad_i, scl_pad_o, scl_padoen_o, sda_pad_i, sda_pad_o, sda_padoen_o );
 
 	// parameters
 	parameter ARST_LVL = 1'b0; // asynchronous reset level
@@ -105,39 +105,39 @@ module i2c_master_top(
 	reg wb_ack_o;
 	reg wb_inta_o;
 
-	inout 		scl;
-	inout 		sda;
+	//inout 		scl;
+	//inout 		sda;
 
 	// I2C signals
 	// i2c clock line
-	//input  scl_pad_i;       // SCL-line input
-	//output scl_pad_o;       // SCL-line output (always 1'b0)
-	//output scl_padoen_o;    // SCL-line output enable (active low)
+	input  scl_pad_i;       // SCL-line input
+	output scl_pad_o;       // SCL-line output (always 1'b0)
+	output scl_padoen_o;    // SCL-line output enable (active low)
 
 	// i2c data line
-	//input  sda_pad_i;       // SDA-line input
-	//output sda_pad_o;       // SDA-line output (always 1'b0)
-	//output sda_padoen_o;    // SDA-line output enable (active low)
+	input  sda_pad_i;       // SDA-line input
+	output sda_pad_o;       // SDA-line output (always 1'b0)
+	output sda_padoen_o;    // SDA-line output enable (active low)
 
 	// I2C signals
 	// i2c clock line
-	wire  scl_pad_i;       // SCL-line input
-	wire  scl_pad_o;       // SCL-line output (always 1'b0)
-	wire  scl_padoen_o;    // SCL-line output enable (active low)
+	//wire  scl_pad_i;       // SCL-line input
+	//wire  scl_pad_o;       // SCL-line output (always 1'b0)
+	//wire  scl_padoen_o;    // SCL-line output enable (active low)
 
 	// i2c data line
-	wire  sda_pad_i;       // SDA-line input
-	wire sda_pad_o;       // SDA-line output (always 1'b0)
-	wire sda_padoen_o;    // SDA-line output enable (active low
+	//wire  sda_pad_i;       // SDA-line input
+	//wire sda_pad_o;       // SDA-line output (always 1'b0)
+	//wire sda_padoen_o;    // SDA-line output enable (active low
 
 	// tri-state buffer
 
 
-	assign scl = (scl_padoen_o == 1'b0) ? scl_pad_o : 1'bz;
-	assign scl_pad_i = 1'b0;
+	//assign scl = (scl_padoen_o == 1'b0) ? scl_pad_o : 1'bz;
+	//assign scl_pad_i = 1'b0;
 
-	assign sda = (sda_padoen_o == 1'b0) ? sda_pad_o : 1'bz;
-	assign sda_pad_i = sda;
+	//assign sda = (sda_padoen_o == 1'b0) ? sda_pad_o : 1'bz;
+	//assign sda_pad_i = sda;
 
 
 	//

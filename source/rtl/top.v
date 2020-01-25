@@ -56,6 +56,8 @@ localparam MOSI_DATA_WIDTH = 24;
 localparam MISO_DATA_WIDTH = 8;
 localparam INSTR_HEADER_LEN = 16;
 
+localparam AD5339_DEVICE_ADDR = 7'b0001100;
+
 wire        mdio_t;
 wire        mdio_i;
 wire        mdio_o;
@@ -257,4 +259,77 @@ vio_0 vio_0_cfg (
   .probe_out0(ad9517_cfg_start),  // output wire [0 : 0] probe_out0
   .probe_out1(adc0_cfg_start)  // output wire [0 : 0] probe_out1
 );
+
+// IIC 
+wire           iic_busy;
+wire [15:0]    ad5339_wr_data;
+wire           ad5339_wr_req;
+wire           ad5339_wr_ack;
+wire           ad5339_wr_done;
+
+wire           ad5339_rd_req;
+//wire [7:0]     ad5339_rd_addr;
+wire           ad5339_rd_ack;
+wire [15:0]    ad5339_rd_data;
+wire           ad5339_rd_done;
+
+
+
+ad5339_cfg ad5339_cfg_i (
+    .sys_clk(clk_20m),
+    .sys_rst(~rstn),
+    .device_addr(AD5339_DEVICE_ADDR),
+    .iic_wr_data(ad5339_wr_data),
+    .iic_wr_req(ad5339_wr_req),
+    .iic_wr_ack(ad5339_wr_ack),
+    .iic_wr_done(ad5339_wr_done),
+
+    .iic_rd_req(ad5339_rd_req),
+   // .iic_rd_addr(),
+    .iic_rd_ack(ad5339_rd_ack),
+    .iic_rd_done(ad5339_rd_done),
+    .iic_rd_data(ad5339_rd_data),
+    .iic_busy_o(iic_busy),
+    .scl(iic_scl),
+    .sda(iic_sda)
+
+);
+
+ila_ad5339 ila_ad5339_i (
+	.clk(clk_20m), // input wire clk
+	.probe0(ad5339_wr_data), // input wire [15:0]  probe0  
+	.probe1(ad5339_rd_data), // input wire [15:0]  probe1 
+	.probe2(ad5339_wr_req), // input wire [0:0]  probe2 
+	.probe3(ad5339_wr_ack), // input wire [0:0]  probe3 
+	.probe4(ad5339_wr_done), // input wire [0:0]  probe4 
+	.probe5(ad5339_rd_req), // input wire [0:0]  probe5 
+	.probe6(ad5339_rd_ack), // input wire [0:0]  probe6 
+	.probe7(ad5339_rd_done), // input wire [0:0]  probe7 
+	.probe8(iic_busy) // input wire [0:0]  probe8
+);
+
+vio_ad5339 vio_ad5339_i (
+  .clk(clk_20m),                // input wire clk
+  .probe_out0(ad5339_wr_req),  // output wire [0 : 0] probe_out0
+  .probe_out1(ad5339_rd_req),  // output wire [0 : 0] probe_out1
+  .probe_out2(ad5339_wr_data)  // output wire [15 : 0] probe_out2
+);
+
+/*
+reg ad5339_rd_req_next, ad5339_rd_req_p;
+reg ad5339_wr_req_next, ad5339_wr_req_p;
+
+always @(posedge clk_20m) begin
+    if (ad5339_wr_req) begin
+        ad5339_wr_req_p <= 1'b1;
+    end 
+    ad5339_wr_req_next <= ad5339_wr_req;
+    ad5339_wr_req_p <= ~ad5339_wr_req_next & ad5339_wr_req;
+
+    ad5339_rd_req_next <= ad5339_rd_req;
+    ad5339_rd_req_p <= ~ad5339_rd_req_next & ad5339_rd_req;
+end
+
+ */
+
 endmodule

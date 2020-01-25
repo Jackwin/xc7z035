@@ -4,6 +4,7 @@
 `define RD  8'h0010_0000
 `define WR  8'h0001_0000
 `define ACK 8'h0000_1000
+`define IACK 8'h0000_0001
 `define CLK_PERIOD 50
 module i2c_sim();
 
@@ -37,21 +38,26 @@ localparam  IDLE_s = 3'b000,
             CFG_SR_s = 3'b111;
 */
 
-localparam  IDLE_s = 4'd0,
-            PRE_L_s = 4'd1,
-            PRE_H_s = 4'd2,
-            WR_CTR_s = 4'd3,
-            WR_CMD_s = 4'd4,
-            WR_CR_s = 4'd5,
-            WR_SR_s = 4'd6,
-            WR_END_s = 4'd7,
+localparam  IDLE_s = 5'd0,
+            PRE_L_s = 5'd1,
+            PRE_H_s = 5'd2,
+            WR_CTR_s = 5'd3,
+            WR_CMD_s = 5'd4,
+            WR_CR_s = 5'd5,
+            WR_WAIT_INTR_s = 5'd6,
+            WR_CLR_INTR_s = 5'd7,
+            WR_SR_s = 5'd8,
+            WR_END_s = 5'd9,
 
-            RD_CTR_s = 4'd8,
-            RD_CMD_s = 4'd9,
-            RD_CR_s = 4'd10,
-            RD_STOP_s = 4'd11,
-            RD_DATA_s = 4'd12,
-            RD_END_s = 4'd13;
+            RD_CTR_s = 5'd10,
+            RD_CMD_s = 5'd11,
+            RD_CR_s = 5'd12,
+            RD_WAIT_INTR_s = 5'd13,
+            RD_CLR_INTR_s = 5'd14,
+            RD_SR_s = 5'd15,
+            RD_STOP_s = 5'd16,
+            RD_DATA_s = 5'd17,
+            RD_END_s = 5'd18;
 
 /*
 
@@ -117,10 +123,7 @@ logic           sda_pad_i;
 logic           sda_pad_o;
 logic           sda_padoen_o;
 
-logic [3:0]     cs, ns;
-//logic [2:0]     wr_cs, wr_ns;
-//logic [3:0]     rd_cs, rd_ns;
-//logic [1:0]     cnt;
+logic [4:0]     cs, ns;
 logic           wr_slave_flag;
 logic           wr_cmd_flag;
 logic           wr_addr_flag;
@@ -221,6 +224,18 @@ always_ff @(posedge sys_clk) begin
     end
 end
 
+/* Write: 
+    1) write device addres
+    2) wait interrupt
+    3) read SR register
+    4) write the target address
+    5) wait interrupt
+    6) read SR register
+    7) write data 
+    8) wait interrupt
+    9) read SR register
+    
+*/
 always_comb begin
     ns = cs;
     case(cs) 
@@ -253,16 +268,28 @@ always_comb begin
             end
         end
         WR_CR_s: begin
-            if (wb_intr & wr_slave_flag & wr_addr_flag & wr_cmd_flag) begin
-                ns = WR_SR_s;
-            end
-            else if (wb_intr) begin
-                ns = WR_CMD_s;
+            if (wb_ack) begin
+                ns = WR_WAIT_INTR_s;
             end
         end
+        WR_WAIT_INTR_s: begin
+            if (wb_intr) begin
+                ns = WR_CLR_INTR_s;
+            end
+
+        end
+        WR_CLR_INTR_s: begin
+            if (wb_intr) begin
+                ns = WR_SR_s;
+            end
+        end
+
         WR_SR_s: begin
-            if (wb_rd_data[7] == 1'b0 ) begin
+            if (wb_rd_data[7] == 1'b0 & wr_slave_flag & wr_addr_flag & wr_data_flag) begin
                 ns = WR_END_s;
+            end
+            else if (wb_rd_data[7] == 1'b0) begin
+                ns = WR_CMD_s;
             end
         end
         WR_END_s: begin
@@ -285,13 +312,41 @@ always_comb begin
             end   
         end
         RD_CR_s: begin
+        /*
             if (wb_intr & (~(rd_slave_flag & rd_cmd_flag & rd_data_flag))) begin
                 ns = RD_CMD_s;
             end
             else if (wb_intr) begin
                 ns = RD_STOP_s;
             end
+        */
+            if (wb_ack) begin
+                ns = RD_WAIT_INTR_s;
+            end
+
         end
+        RD_WAIT_INTR_s: begin
+            if (wb_intr) begin
+                ns = RD_CLR_INTR_s;
+            end
+        end
+
+        RD_CLR_INTR_s: begin
+            if (wb_intr) begin
+                ns = RD_SR_s;
+            end
+        end
+
+        RD_SR_s: begin
+
+            if (wb_rd_data[7] == 1'b0 & (~(rd_slave_flag & rd_cmd_flag & rd_data_flag))) begin
+                ns = RD_STOP_s;
+            end
+            else if (wb_rd_data[7] == 1'b0) begin
+                ns = RD_CMD_s;
+            end
+        end
+
         RD_STOP_s: begin
             if (wb_ack) begin
                 ns = RD_DATA_s;
@@ -402,6 +457,8 @@ always_ff @(posedge sys_clk) begin
                     wb_cyc <= 0;
                 end
             end
+
+            
             WR_CR_s: begin
                 if (wr_slave_flag & ~wr_addr_flag & ~wr_data_flag) begin
                     wb_addr <= CR_SR_ADDR; 
@@ -426,6 +483,26 @@ always_ff @(posedge sys_clk) begin
                     wb_cyc <= 0;
                 end
             end
+
+            WR_WAIT_INTR_s: begin
+                wb_we <= 0;
+                wb_stb <= 0;
+                wb_cyc <= 0;
+            end
+
+            WR_CLR_INTR_s: begin
+                wb_addr <= CR_SR_ADDR; 
+                wb_wr_data <= `IACK;
+                wb_we <= 1;
+                wb_stb <= 1;
+                wb_cyc <= 1;
+                if (wb_ack) begin
+                    wb_we <= 0;
+                    wb_stb <= 0;
+                    wb_cyc <= 0;
+                end 
+            end
+
             WR_SR_s: begin
                 wb_addr <= CR_SR_ADDR;
                 wb_we <= 0;
@@ -497,6 +574,31 @@ always_ff @(posedge sys_clk) begin
                     wb_cyc <= 0;
                 end
             end
+            RD_WAIT_INTR_s: begin
+                wb_we <= 0;
+                wb_stb <= 0;
+                wb_cyc <= 0;
+            end
+            RD_CLR_INTR_s: begin
+                wb_addr <= CR_SR_ADDR; 
+                wb_wr_data <= `IACK;
+                if (wb_ack) begin
+                    wb_we <= 1;
+                    wb_stb <= 1;
+                    wb_cyc <= 1;
+                end
+            end
+            RD_SR_s: begin
+                wb_addr <= CR_SR_ADDR;
+                wb_we <= 0;
+                wb_stb <= 1;
+                wb_cyc <= 1;
+                if (wb_ack) begin
+                    wb_stb <= 0;
+                    wb_cyc <= 0;
+                end
+            end
+
             RD_STOP_s: begin
                 wb_addr <= CR_SR_ADDR;
                 wb_wr_data <= `RD| `ACK | `STO;
