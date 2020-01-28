@@ -140,3 +140,12 @@ set_property IOSTANDARD LVCMOS18 [get_ports c_pl_led141]
 
 #set_location_assignment PIN_G16 -to pl_key2
 #set_location_assignment PIN_G15 -to pl_key1
+
+### trig
+set_property PACKAGE_PIN AB10  [get_ports trig_in]
+set_property PACKAGE_PIN AF15 [get_ports trig_d]
+set_property PACKAGE_PIN AC14  [get_ports trig_rst]
+
+set_property IOSTANDARD LVCMOS18 [get_ports trig_in]
+set_property IOSTANDARD LVCMOS18 [get_ports trig_d]
+set_property IOSTANDARD LVCMOS18 [get_ports trig_rst]

@@ -50,7 +50,12 @@ module top (
 
     // iic
     inout           iic_sda,
-    inout           iic_scl
+    inout           iic_scl,
+
+    //trig
+    input           trig_in,
+    output          trig_d,
+    output          trig_rst
 );
 localparam MOSI_DATA_WIDTH = 24;
 localparam MISO_DATA_WIDTH = 8;
@@ -128,8 +133,6 @@ always @(posedge clk_20m) begin
     cfg_start_r <= cfg_start_vio;
     cfg_start <= ~cfg_start_vio & cfg_start_r;
 end
-
-
 
 //system_wrapper system_wrapper_i();
 
@@ -273,8 +276,7 @@ wire           ad5339_rd_ack;
 wire [15:0]    ad5339_rd_data;
 wire           ad5339_rd_done;
 
-
-
+// ------------------------------------------- AD5339 ------------------------------------
 ad5339_cfg ad5339_cfg_i (
     .sys_clk(clk_20m),
     .sys_rst(~rstn),
@@ -294,7 +296,7 @@ ad5339_cfg ad5339_cfg_i (
     .sda(iic_sda)
 
 );
-
+/*
 ila_ad5339 ila_ad5339_i (
 	.clk(clk_20m), // input wire clk
 	.probe0(ad5339_wr_data), // input wire [15:0]  probe0  
@@ -307,7 +309,7 @@ ila_ad5339 ila_ad5339_i (
 	.probe7(ad5339_rd_done), // input wire [0:0]  probe7 
 	.probe8(iic_busy) // input wire [0:0]  probe8
 );
-
+*/
 vio_ad5339 vio_ad5339_i (
   .clk(clk_20m),                // input wire clk
   .probe_out0(ad5339_wr_req),  // output wire [0 : 0] probe_out0
@@ -315,21 +317,18 @@ vio_ad5339 vio_ad5339_i (
   .probe_out2(ad5339_wr_data)  // output wire [15 : 0] probe_out2
 );
 
-/*
-reg ad5339_rd_req_next, ad5339_rd_req_p;
-reg ad5339_wr_req_next, ad5339_wr_req_p;
+// -------------------------------------- trig ----------------------------------------
 
-always @(posedge clk_20m) begin
-    if (ad5339_wr_req) begin
-        ad5339_wr_req_p <= 1'b1;
-    end 
-    ad5339_wr_req_next <= ad5339_wr_req;
-    ad5339_wr_req_p <= ~ad5339_wr_req_next & ad5339_wr_req;
+trig trig_i (
+    .sys_clk(clk_20m),
+    .sys_rst(~rstn),
+    .trig_in(trig_in),
+    .trig_d_o(trig_d),
+    .trig_rst_o(trig_rst)
 
-    ad5339_rd_req_next <= ad5339_rd_req;
-    ad5339_rd_req_p <= ~ad5339_rd_req_next & ad5339_rd_req;
-end
+);
 
- */
+
+
 
 endmodule
