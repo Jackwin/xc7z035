@@ -6,9 +6,7 @@ struct memory_range_s memory_ranges[] = {
 		"ps7_ddr_0",
 		"ps7_ddr_0",
 		0x00100000,
-		//0x001000,
 		0x40000000,
-		//0x3ff00000,
 	},
 	/* ps7_ram_0 memory will not be tested since application resides in the same memory */
 	{

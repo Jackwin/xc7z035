@@ -53,7 +53,7 @@ localparam  IDLE_s = 1,
 logic           cfg_start_r, cfg_start;
 logic           timeout;
 logic [15:0]    timer_cnt;
-logic [6:0]     addr_next, addr;
+logic [3:0]     addr_next, addr;
 logic           spi_wr_cmd;
 logic           spi_rd_cmd;
 logic [MOSI_DATA_WIDTH-1:0]  spi_wr_data;
@@ -62,6 +62,7 @@ logic [3:0]     spi_cfg_cnt, spi_cfg_cnt_next;
 logic           cfg_done;
 logic           timer_ena;
 logic           timer_clr;
+logic [23:0]    rom_data;
 
 always_comb begin
     o_spi_wr_cmd = spi_wr_cmd;
@@ -133,25 +134,27 @@ always_comb begin
             ns = SPI_CFG_ACK_s;
     end
     SPI_CFG_ACK_s: begin
-        if (~i_spi_busy & spi_cfg_cnt != 4'd9) begin
+        if (~i_spi_busy & spi_cfg_cnt != 4'd14) begin //9
             ns = RD_ROM_s;
             addr_next = addr + 1;
         end
-        else if (~i_spi_busy & spi_cfg_cnt == 4'd9) ns = READ_CFG_s;
+        else if (~i_spi_busy & spi_cfg_cnt == 4'd14) ns = READ_CFG_s;//9
     end
     READ_CFG_s: begin
         spi_rd_cmd = 1'b1;
         spi_wr_data = 24'h00802A;
+        //spi_wr_data = {16'h0080, AD9434_ID_ADDR};
         ns = CONFIRM_CFG_s;
     end
     CONFIRM_CFG_s: begin
         if (i_spi_rd_data[7:0] == 8'h03) begin
+        //if (i_spi_rd_data[7:0] == AD9434_ID) begin
             cfg_done = 1;
             ns = IDLE_s;            
         end
 
         if (timeout) begin
-            ns = IDLE_s;
+            ns = READ_CFG_s;
         end
     end
     default: ns = IDLE_s;
@@ -185,26 +188,27 @@ always_ff @(posedge clk) begin
 end
 
 ad9434_cfg_rom ad9434_cfg_rom_i (
-  .clka(clk),    // input wire clka
-  .ena(1'b1),      // input wire ena
-  .addra(addr),  // input wire [6 : 0] addra
-  .douta(rom_data)  // output wire [31 : 0] douta
+  .clka(clk),    
+  .ena(1'b1),      
+  .addra(addr),  
+  .douta(rom_data)  
 );
 
 
-ila_ad9517 ila_adc_i (
+ila_ad9434 ila_ad9434_i (
 	.clk(clk), // input wire clk
-	.probe0(cs), // input wire [2:0]  probe0  
-	.probe1(spi_wr_data), // input wire [23:0]  probe1 
-	.probe2(i_spi_rd_data), // input wire [7:0]  probe2 
-	.probe3(spi_wr_cmd), // input wire [0:0]  probe3 
-	.probe4(spi_rd_cmd), // input wire [0:0]  probe4 
-	.probe5(i_spi_busy), // input wire [0:0]  probe5 
-	.probe6(i_cfg_start), // input wire [0:0]  probe6 
-	.probe7(timer_cnt), // input wire [5:0]  probe7 
-	.probe8(timer_cnt[6:0]), // input wire [6:0]  probe8 
+	.probe0(spi_wr_data), // input wire [23:0]  probe0  
+	.probe1(i_spi_rd_data), // input wire [7:0]  probe1 
+	.probe2(spi_wr_cmd), // input wire [0:0]  probe2 
+	.probe3(spi_rd_cmd), // input wire [0:0]  probe3 
+	.probe4(i_spi_busy), // input wire [0:0]  probe4 
+	.probe5(i_cfg_start), // input wire [0:0]  probe5 
+	.probe6(cfg_done), // input wire [0:0]  probe6 
+	.probe7(addr), // input wire [3:0]  probe7 
+	.probe8(rom_data), // input wire [23:0]  probe8 
 	.probe9(timeout), // input wire [0:0]  probe9 
-	.probe10(timer_ena) // input wire [0:0]  probe10
+	.probe10(timer_ena), // input wire [0:0]  probe10
+    .probe11(cs) // input wire [1:0]  probe11
 );
 
 endmodule

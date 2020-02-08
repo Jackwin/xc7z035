@@ -24,7 +24,7 @@ module top (
     input           adc0_or_n,
     input           adc0_dco_p,
     input           adc0_dco_n,
-    output          adc0_pd_n,
+    output          adc0_pd,
     output reg      adc0_cs_n,
     //ADC1 
     input [5:0]     adc1_din_p,
@@ -55,7 +55,12 @@ module top (
     //trig
     input           trig_in,
     output          trig_d,
-    output          trig_rst
+    output          trig_rst,
+
+    //DDR 
+
+    input           sys_clk_100m_p,
+    input           sys_clk_100m_n
 );
 localparam MOSI_DATA_WIDTH = 24;
 localparam MISO_DATA_WIDTH = 8;
@@ -95,7 +100,7 @@ assign ad9517_sync_n = 1'b1;
 
 // ADC0
 
-assign adc0_pd_n = 1'b1;
+assign adc0_pd = 1'b0;
 
 // LED
 
@@ -328,7 +333,65 @@ trig trig_i (
 
 );
 
+wire    sys_clk_100m;
+wire    sys_clk_locked;
+wire    sys_clk_200m;
+IBUFDS #(
+    .DIFF_TERM("TRUE"),       // Differential Termination
+    .IBUF_LOW_PWR("TRUE"),     // Low power="TRUE", Highest performance="FALSE" 
+    .IOSTANDARD("DIFF_SSTL15")     // Specify the input I/O standard
+) IBUFDS_inst (
+    .O(sys_clk_100m),  // Buffer output
+    .I(sys_clk_100m_p),  // Diff_p buffer input (connect directly to top-level port)
+    .IB(sys_clk_100m_n) // Diff_n buffer input (connect directly to top-level port)
+);
 
+clk_wiz_ddr clk_wiz_ddr_i (
+    // Clock out ports
+    .clk_out1(sys_clk_200m),     // output clk_out1
+    // Status and control signals
+    .reset(~rstn), // input reset
+    .locked(sys_clk_locked),       // output locked
+    // Clock in ports
+    .clk_in1(sys_clk_100m)
+);
 
+vio_sys vio_sys_i (
+  .clk(sys_clk_200m),              // input wire clk
+  .probe_in0(sys_clk_locked)  // input wire [0 : 0] probe_in0
+);
+vio_sys vio_sys_ii (
+  .clk(clk_200m),              // input wire clk
+  .probe_in0(sys_clk_locked)  // input wire [0 : 0] probe_in0
+);
+// --------------------- ADC ---------------------------
+
+/*
+wire    dummy;
+ top5x2_7to1_ddr_rx # (
+     .D(6),
+     .N(1)
+
+ ) adc0 (
+	.reset(~rstn),					// reset (active high)
+    .refclkin(clk_200m),				// Reference clock for input delay control
+    .clkin_p(adc0_dco_p),  
+    .clkin_n(adc0_dco_n),			// lvds channel 1 clock input
+    .datain_p(adc0_din_p), 
+    .datain_n(adc0_din_n),			// lvds channel 1 data inputs
+    .dummy(dummy)
+) ; 				// Dummy output for test
+*/
+
+ad9434_data ad9434_data_i(
+    .rst(~rstn),
+    .clk_200m_in(clk_200m),
+    .adc0_din_p(adc0_din_p),
+    .adc0_din_n(adc0_din_n),
+    .adc0_or_p(adc0_or_p),
+    .adc0_or_n(adc0_or_n),
+    .adc0_dco_p(adc0_dco_p),
+    .adc0_dco_n(adc0_dco_n)
+);
 
 endmodule

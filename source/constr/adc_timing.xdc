@@ -1,0 +1,31 @@
+create_clock -period 3.333 -name adc0_clk -waveform {0.000 2.000} [get_ports adc0_dco_p]
+
+#set_input_delay -clock [get_clocks adc0_clk] -min -0.223 [get_ports -filter { NAME =~  "*adc0_din_p*" && DIRECTION == "IN" }]
+#set_input_delay -clock [get_clocks adc0_clk] -max -0.223 [get_ports -filter { NAME =~  "*adc0_din_p*" && DIRECTION == "IN" }]
+#set_input_delay -clock [get_clocks adc0_clk] -clock_fall -fall -min -add_delay -0.223 [get_ports -filter { NAME =~  "*adc0_din_p*" && DIRECTION == "IN" }]
+#set_input_delay -clock [get_clocks adc0_clk] -clock_fall -fall -max -add_delay -0.223 [get_ports -filter { NAME =~  "*adc0_din_p*" && DIRECTION == "IN" }]
+
+set_input_delay -clock [get_clocks adc0_clk] -min -0.07 [get_ports -filter { NAME =~  "*adc0_din_p*" && DIRECTION == "IN" }]
+set_input_delay -clock [get_clocks adc0_clk] -max -0.07 [get_ports -filter { NAME =~  "*adc0_din_p*" && DIRECTION == "IN" }]
+set_input_delay -clock [get_clocks adc0_clk] -clock_fall -fall -min -add_delay -0.07 [get_ports -filter { NAME =~  "*adc0_din_p*" && DIRECTION == "IN" }]
+set_input_delay -clock [get_clocks adc0_clk] -clock_fall -fall -max -add_delay -0.07 [get_ports -filter { NAME =~  "*adc0_din_p*" && DIRECTION == "IN" }]
+
+#set_property LOC IDELAY_X0Y210 [get_cells ad9434_data_i/idelay[0].IDELAYE2_dco]
+#set_property LOC IDELAY_X0Y216 [get_cells ad9434_data_i/idelay[1].IDELAYE2_dco]
+#set_property LOC IDELAY_X0Y208 [get_cells ad9434_data_i/idelay[2].IDELAYE2_dco]
+#set_property LOC IDELAY_X0Y206 [get_cells ad9434_data_i/idelay[3].IDELAYE2_dco]
+#set_property LOC IDELAY_X0Y202 [get_cells ad9434_data_i/idelay[4].IDELAYE2_dco]
+#set_property LOC IDELAY_X0Y204 [get_cells ad9434_data_i/idelay[5].IDELAYE2_dco]
+
+set_property IODELAY_GROUP  adc_idelay_grp [get_cells ad9434_data_i/IDELAYCTRL_dco]
+set_property IODELAY_GROUP  adc_idelay_grp [get_cells ad9434_data_i/idelay[0].IDELAYE2_dco]
+set_property IODELAY_GROUP  adc_idelay_grp [get_cells ad9434_data_i/idelay[1].IDELAYE2_dco]
+set_property IODELAY_GROUP  adc_idelay_grp [get_cells ad9434_data_i/idelay[2].IDELAYE2_dco]
+set_property IODELAY_GROUP  adc_idelay_grp [get_cells ad9434_data_i/idelay[3].IDELAYE2_dco]
+set_property IODELAY_GROUP  adc_idelay_grp [get_cells ad9434_data_i/idelay[4].IDELAYE2_dco]
+set_property IODELAY_GROUP  adc_idelay_grp [get_cells ad9434_data_i/idelay[5].IDELAYE2_dco]
+
+set_property C_CLK_INPUT_FREQ_HZ 300000000 [get_debug_cores dbg_hub]
+set_property C_ENABLE_CLK_DIVIDER false [get_debug_cores dbg_hub]
+set_property C_USER_SCAN_CHAIN 1 [get_debug_cores dbg_hub]
+connect_debug_port dbg_hub/clk [get_nets clk_200m]
