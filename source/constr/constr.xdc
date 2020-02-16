@@ -61,7 +61,7 @@ set_property PACKAGE_PIN AF20 [get_ports adc1_or_n]
 set_property PACKAGE_PIN AC23 [get_ports adc1_dco_p]
 set_property PACKAGE_PIN AC24 [get_ports adc1_dco_n]
 
-set_property PACKAGE_PIN W17 [get_ports adc1_pd_n]
+set_property PACKAGE_PIN W17 [get_ports adc1_pd]
 set_property PACKAGE_PIN Y16 [get_ports adc1_cs_n]
 
 set_property IOSTANDARD LVDS_25 [get_ports {adc1_din_p[*]}]
@@ -71,8 +71,16 @@ set_property IOSTANDARD LVDS_25 [get_ports adc1_or_n]
 set_property IOSTANDARD LVDS_25 [get_ports adc1_dco_p]
 set_property IOSTANDARD LVDS_25 [get_ports adc1_dco_n]
 
-set_property IOSTANDARD LVCMOS18 [get_ports adc1_pd_n]
+set_property IOSTANDARD LVCMOS18 [get_ports adc1_pd]
 set_property IOSTANDARD LVCMOS18 [get_ports adc1_cs_n]
+
+set_property IOSTANDARD LVDS_25 [get_ports {adc1_din_p[*]}]
+set_property IOSTANDARD LVDS_25 [get_ports {adc1_din_n[*]}]
+set_property IOSTANDARD LVDS_25 [get_ports adc1_or_p]
+set_property IOSTANDARD LVDS_25 [get_ports adc1_or_n]
+set_property IOSTANDARD LVDS_25 [get_ports adc1_dco_p]
+set_property IOSTANDARD LVDS_25 [get_ports adc1_dco_n]
+
 
 
 ### ADC 0

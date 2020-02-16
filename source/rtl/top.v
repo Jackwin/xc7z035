@@ -33,7 +33,7 @@ module top (
     input           adc1_or_n,
     input           adc1_dco_p,
     input           adc1_dco_n,
-    output          adc1_pd_n,
+    output          adc1_pd,
     output          adc1_cs_n,
 
     //AD9517
@@ -99,8 +99,9 @@ assign ad9517_ref_sel = 1'b0; // Not used in differential clock. Controlled by R
 assign ad9517_sync_n = 1'b1;
 
 // ADC0
-
 assign adc0_pd = 1'b0;
+// ADC0
+assign adc1_pd = 1'b0;
 
 // LED
 
@@ -383,7 +384,7 @@ wire    dummy;
 ) ; 				// Dummy output for test
 */
 
-ad9434_data ad9434_data_i(
+ad9434_data ad9434_data_0(
     .rst(~rstn),
     .clk_200m_in(clk_200m),
     .adc0_din_p(adc0_din_p),
@@ -392,6 +393,17 @@ ad9434_data ad9434_data_i(
     .adc0_or_n(adc0_or_n),
     .adc0_dco_p(adc0_dco_p),
     .adc0_dco_n(adc0_dco_n)
+);
+
+ad9434_data ad9434_data_1(
+    .rst(~rstn),
+    .clk_200m_in(clk_200m),
+    .adc0_din_p(adc1_din_p),
+    .adc0_din_n(adc1_din_n),
+    .adc0_or_p(adc1_or_p),
+    .adc0_or_n(adc1_or_n),
+    .adc0_dco_p(adc1_dco_p),
+    .adc0_dco_n(adc1_dco_n)
 );
 
 endmodule

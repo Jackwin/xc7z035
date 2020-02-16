@@ -68,7 +68,6 @@ wire    clkin;
 wire    adc_clk;
 wire    dco_idelay;
 
-//
 
 if (CLK_MODE == "MMCM") begin :mmcm_mode
     assign clkin = dco_idelay;
@@ -197,8 +196,6 @@ generate
     end
 endgenerate
 
-
-
 generate 
     for (i = 0; i < 6; i = i + 1) begin: idelay
    
@@ -261,7 +258,7 @@ always @(posedge adc_clk) begin
     adc_data2 <= adc_data_q2;
 end
 
-ila_adc0_ddr your_instance_name (
+ila_adc0_ddr ila_adc0_ddr_i (
 	.clk(adc_clk), // input wire clk
 	.probe0(adc_data1), // input wire [5:0]  probe0  
 	.probe1(adc_data2), // input wire [5:0]  probe1 
