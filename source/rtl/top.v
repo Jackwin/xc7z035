@@ -34,7 +34,7 @@ module top (
     input           adc1_dco_p,
     input           adc1_dco_n,
     output          adc1_pd,
-    output          adc1_cs_n,
+    output reg     adc1_cs_n,
 
     //AD9517
     output          ad9517_reset_n,   
@@ -172,6 +172,14 @@ wire    adc0_spi_busy;
 wire    adc0_cfg_start;
 wire    adc0_cfg_go;
 
+wire    adc1_spi_wr_cmd;
+wire    adc1_spi_rd_cmd;
+wire [MOSI_DATA_WIDTH-1:0] adc1_spi_wr_data;
+wire [MISO_DATA_WIDTH:0]  adc1_spi_rd_data;
+wire    adc1_spi_busy;
+wire    adc1_cfg_start;
+wire    adc1_cfg_go;
+
 adc_cfg adc0_cfg(
     .clk(clk_20m),
     .rst(~rstn),
@@ -184,8 +192,22 @@ adc_cfg adc0_cfg(
     .o_cfg_go(adc0_cfg_go)
 );
 
+adc_cfg adc1_cfg(
+    .clk(clk_20m),
+    .rst(~rstn),
+    .o_spi_wr_cmd(adc1_spi_wr_cmd),
+    .o_spi_rd_cmd(adc1_spi_rd_cmd),
+    .o_spi_wr_data(adc1_spi_wr_data),
+    .i_spi_rd_data(adc1_spi_rd_data),
+    .i_spi_busy(adc1_spi_busy),
+    .i_cfg_start(adc1_cfg_start),
+    .o_cfg_go(adc1_cfg_go)
+);
+
 assign adc0_spi_rd_data = spi_rd_data;
 assign adc0_spi_busy = spi_busy;
+assign adc1_spi_rd_data = spi_rd_data;
+assign adc1_spi_busy = spi_busy;
 
 always @(*) begin
     if (adc0_cfg_go) begin
@@ -194,6 +216,15 @@ always @(*) begin
         spi_wr_data = adc0_spi_wr_data;
         adc0_cs_n = spi_cs_n;
         ad9517_cs_n = 1'b1;
+        adc1_cs_n = 1'b1;
+    end
+    else if (adc1_cfg_go) begin
+        spi_wr_cmd = adc1_spi_wr_cmd;
+        spi_rd_cmd = adc1_spi_rd_cmd;
+        spi_wr_data = adc1_spi_wr_data;
+        adc1_cs_n = spi_cs_n;
+        ad9517_cs_n = 1'b1;
+        adc0_cs_n = 1'b1;
     end
     else begin
         spi_wr_cmd = ad9517_spi_wr_cmd;
@@ -201,6 +232,7 @@ always @(*) begin
         spi_wr_data = ad9517_spi_wr_data;
         ad9517_cs_n = spi_cs_n;
         adc0_cs_n = 1'b1;
+        adc1_cs_n = 1'b1;
     end
 end
 
@@ -266,7 +298,8 @@ ila_spi ila_spi_i (
 vio_0 vio_0_cfg (
   .clk(clk_200m),                // input wire clk
   .probe_out0(ad9517_cfg_start),  // output wire [0 : 0] probe_out0
-  .probe_out1(adc0_cfg_start)  // output wire [0 : 0] probe_out1
+  .probe_out1(adc0_cfg_start),  // output wire [0 : 0] probe_out1
+  .probe_out2(adc1_cfg_start)
 );
 
 // IIC 
