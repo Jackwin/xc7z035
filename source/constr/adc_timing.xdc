@@ -1,4 +1,4 @@
-create_clock -period 4.00 -name adc0_clk -waveform {0.000 2.000} [get_ports adc0_dco_p]
+create_clock -period 2.50 -name adc0_clk -waveform {0.000 1.250} [get_ports adc0_dco_p]
 
 #set_input_delay -clock [get_clocks adc0_clk] -min -0.223 [get_ports -filter { NAME =~  "*adc0_din_p*" && DIRECTION == "IN" }]
 #set_input_delay -clock [get_clocks adc0_clk] -max -0.223 [get_ports -filter { NAME =~  "*adc0_din_p*" && DIRECTION == "IN" }]
@@ -55,12 +55,16 @@ set_property IODELAY_GROUP  adc_idelay_grp [get_cells ad9434_data_i/idelay_mode.
 #set_false_path -hold -fall_from [get_clocks virt_clk] -fall_to [get_clocks -of_objects [get_pins ad9434_data_i/mmcm_mode.clk_wiz_inst/inst/mmcm_adv_inst/CLKOUT0]]
 
 
-create_clock -period 4 -name virt_clk -waveform {0.00 2.00}
-set_multicycle_path 0 -from [get_clocks virt_clk] -to [get_clocks adc0_clk]
+create_clock -period 2.50 -name virt_clk -waveform {0.00 1.25}
+set_multicycle_path -setup -end 0 -rise_from [get_clocks virt_clk] -rise_to [get_clocks adc0_clk]
+set_multicycle_path -setup -end 0 -fall_from [get_clocks virt_clk] -fall_to [get_clocks adc0_clk]
+set_multicycle_path -hold -end -1 -rise_from [get_clocks virt_clk] -rise_to [get_clocks adc0_clk]
+set_multicycle_path -hold -end -1 -fall_from [get_clocks virt_clk] -fall_to [get_clocks adc0_clk]
+
 set_false_path -setup -rise_from [get_clocks virt_clk] -fall_to [get_clocks adc0_clk]
 set_false_path -setup -fall_from [get_clocks virt_clk] -rise_to [get_clocks adc0_clk]
 
-set_multicycle_path -1 -hold -from [get_clocks virt_clk] -to [get_clocks adc0_clk]
+
 set_false_path -hold -rise_from [get_clocks virt_clk] -rise_to [get_clocks adc0_clk]
 set_false_path -hold -fall_from [get_clocks virt_clk] -fall_to [get_clocks adc0_clk]
 

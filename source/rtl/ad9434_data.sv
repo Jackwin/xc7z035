@@ -143,8 +143,8 @@ else begin:idelay_mode
         .CLR(), // 1-bit input: Active high, asynchronous clear (Divided modes only)
         .I(dco)      // 1-bit input: Clock buffer input driven by an IBUF, MMCM or local interconnect
     );
-
 /*
+
     IDELAYE2 #(
         .CINVCTRL_SEL("FALSE"),          // Enable dynamic clock inversion (FALSE, TRUE)
         .DELAY_SRC("IDATAIN"),           // Delay input (IDATAIN, DATAIN)
