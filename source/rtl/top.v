@@ -60,7 +60,13 @@ module top (
     //DDR 
 
     input           sys_clk_100m_p,
-    input           sys_clk_100m_n
+    input           sys_clk_100m_n,
+
+    // output GPIO
+    output          hp_gpio0, //SMA3
+    output          hp_gpio1, //SMA4
+    output          hp_gpio2, //SMA5
+    output          hp_clk //SMA6
 );
 localparam MOSI_DATA_WIDTH = 24;
 localparam MISO_DATA_WIDTH = 8;
@@ -438,5 +444,21 @@ ad9434_data ad9434_data_1(
     .adc0_dco_p(adc1_dco_p),
     .adc0_dco_n(adc1_dco_n)
 );
+
+// -------------------------- HP GPIO ---------------------------
+
+  ODDR #(
+      .DDR_CLK_EDGE("SAME_EDGE"), // "OPPOSITE_EDGE" or "SAME_EDGE" 
+      .INIT(1'b0),    // Initial value of Q: 1'b0 or 1'b1
+      .SRTYPE("SYNC") // Set/Reset type: "SYNC" or "ASYNC" 
+   ) ODDR_HP_CLK (
+      .Q(hp_clk),   // 1-bit DDR output
+      .C(clk_20m),   // 1-bit clock input
+      .CE(1'b1), // 1-bit clock enable input
+      .D1(1'b1), // 1-bit data input (positive edge)
+      .D2(1'b0), // 1-bit data input (negative edge)
+      .R(1'b0),   // 1-bit reset
+      .S(1'b0)    // 1-bit set
+   );
 
 endmodule

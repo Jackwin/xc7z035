@@ -172,5 +172,14 @@ set_property IOSTANDARD DIFF_SSTL15 [get_ports sys_clk_100m_p]
 set_property PACKAGE_PIN D6 [get_ports sys_clk_100m_p]
 create_clock -period 10.000 [get_ports sys_clk_100m_p]
 
+### HP GPIO
+set_property PACKAGE_PIN D8 [get_ports hp_gpio0]
+set_property PACKAGE_PIN E8 [get_ports hp_gpio1]
+set_property PACKAGE_PIN F9 [get_ports hp_gpio2]
+set_property PACKAGE_PIN F8 [get_ports hp_clk]
 
+set_property IOSTANDARD LVCMOS15 [get_ports hp_gpio0]
+set_property IOSTANDARD LVCMOS15 [get_ports hp_gpio1]
+set_property IOSTANDARD LVCMOS15 [get_ports hp_gpio2]
+set_property IOSTANDARD LVCMOS15 [get_ports hp_clk]
 
