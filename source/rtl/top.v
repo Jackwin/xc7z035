@@ -496,12 +496,38 @@ ad9434_data ad9434_data_1(
    );
 
 // ------------------------ pulse generator --------------------
+wire [15:0]    gap_us;
+wire [10:0]    pulse_num;
+wire [10:0]    pulse_width;
+wire           pulse_gen_start;
+wire           pulse_gen_trig;
+wire           pulse_gen_done;
+
 pulse_gen pulse_gen_inst (
     .clk(clk_500m),
     .clk_div(clk_125m),
     .rst(~rstn),
+    .pulse_width_i(pulse_width),
+    .pulse_num_i(pulse_num),
+    .gap_us_i(gap_us),
+    .start_i(pulse_gen_start),
+    .trig_o(pulse_gen_trig),
+    .done_o(pulse_gen_done),
     .q(hp_gpio0)
 
 );
+
+vio_pulse_gen vio_pulse_gen_inst (
+  .clk(clk_125m),                // input wire clk
+  .probe_in0(pulse_gen_trig),
+  .probe_in1(pulse_gen_done),
+  .probe_out0(pulse_width),  // output wire [10 : 0] probe_out0
+  .probe_out1(pulse_num),  // output wire [10 : 0] probe_out1
+  .probe_out2(gap_us),  // output wire [15 : 0] probe_out2
+  .probe_out3(pulse_gen_start)  // output wire [0 : 0] probe_out3
+);
+
+
+
 
 endmodule
