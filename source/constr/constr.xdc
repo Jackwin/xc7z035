@@ -168,9 +168,9 @@ set_property IOSTANDARD LVCMOS18 [get_ports trig_rst]
 
 ### DDR
 
-set_property IOSTANDARD DIFF_SSTL15 [get_ports sys_clk_100m_p]
-set_property PACKAGE_PIN D6 [get_ports sys_clk_100m_p]
-create_clock -period 10.000 [get_ports sys_clk_100m_p]
+set_property IOSTANDARD DIFF_SSTL15 [get_ports sys_clk_200m_p]
+set_property PACKAGE_PIN D6 [get_ports sys_clk_200m_p]
+
 
 ### HP GPIO
 set_property PACKAGE_PIN D8 [get_ports hp_gpio0]
@@ -183,3 +183,6 @@ set_property IOSTANDARD LVCMOS15 [get_ports hp_gpio1]
 set_property IOSTANDARD LVCMOS15 [get_ports hp_gpio2]
 set_property IOSTANDARD LVCMOS15 [get_ports hp_clk]
 
+
+#create_clock -period 20.0 -name clk_50m -waveform {0.000 10.0} [get_ports clk50m_in]
+create_clock -period 5.000 -name sys_clk_200m -waveform {0.000 2.50} [get_ports sys_clk_200m_p]

@@ -59,8 +59,8 @@ module top (
 
     //DDR 
 
-    input           sys_clk_100m_p,
-    input           sys_clk_100m_n,
+    input           sys_clk_200m_p,
+    input           sys_clk_200m_n,
 
     // output GPIO
     output          hp_gpio0, //SMA3
@@ -80,6 +80,7 @@ wire        mdio_o;
 wire        locked;
 wire        clk_200m;
 wire        clk_20m;
+wire        clk_800m;
 
 wire        spi_mosi;
 wire        spi_miso;
@@ -123,7 +124,8 @@ assign c_pl_led141 = 1'b0;
     .resetn(rstn), // input resetn
     .locked(locked),       // output locked
    // Clock in ports
-    .clk50m_in(clk50m_in)); 
+    .clk50m_in(clk50m_in)
+    ); 
 
 system bd_system(
 /*
@@ -376,6 +378,7 @@ trig trig_i (
 wire    sys_clk_100m;
 wire    sys_clk_locked;
 wire    sys_clk_200m;
+/*
 IBUFDS #(
     .DIFF_TERM("TRUE"),       // Differential Termination
     .IBUF_LOW_PWR("TRUE"),     // Low power="TRUE", Highest performance="FALSE" 
@@ -388,22 +391,53 @@ IBUFDS #(
 
 clk_wiz_ddr clk_wiz_ddr_i (
     // Clock out ports
-    .clk_out1(sys_clk_200m),     // output clk_out1
+    .clk_200(sys_clk_200m),     // output clk_out1
+    .clk_800(clk_800m),
     // Status and control signals
     .reset(~rstn), // input reset
     .locked(sys_clk_locked),       // output locked
     // Clock in ports
     .clk_in1(sys_clk_100m)
 );
+*/
+
+// VCO = ref_in * CLKBOUT_MULT_F/DIVCLK_DIVIDE
+// clk0 = VCO / CLK0_DIVIDE
+// clk1 = VCO / CLK1_DIVIDE
+wire    sys_clk_200m;
+wire    clk_125m;
+wire    clk_500m;
+IBUFDS #(
+    .DIFF_TERM("TRUE"),       // Differential Termination
+    .IBUF_LOW_PWR("TRUE"),     // Low power="TRUE", Highest performance="FALSE" 
+    .IOSTANDARD("DIFF_SSTL15")     // Specify the input I/O standard
+) IBUFDS_sys_clk_200m (
+    .O(sys_clk_200m),  // Buffer output
+    .I(sys_clk_200m_p),  // Diff_p buffer input (connect directly to top-level port)
+    .IB(sys_clk_200m_n) // Diff_n buffer input (connect directly to top-level port)
+);
+
+clock_gen #(
+    .REF_CLK_PERIOD(5.0),
+    .CLKBOUT_MULT_F(5.0),
+    .DIVCLK_DIVIDE(1),
+    .CLK0_DIVIDE(8.0),
+    .CLK1_DIVIDE(2)
+) clock_gen_inst (
+    .ref_clk(sys_clk_200m),
+    .rst(~rstn),
+
+    .locked_o(sys_clk_locked),
+    .clk0_o(clk_125m),
+    .clk1_o(clk_500m)
+
+);
 
 vio_sys vio_sys_i (
   .clk(sys_clk_200m),              // input wire clk
   .probe_in0(sys_clk_locked)  // input wire [0 : 0] probe_in0
 );
-vio_sys vio_sys_ii (
-  .clk(clk_200m),              // input wire clk
-  .probe_in0(sys_clk_locked)  // input wire [0 : 0] probe_in0
-);
+
 // --------------------- ADC ---------------------------
 
 /*
@@ -460,5 +494,14 @@ ad9434_data ad9434_data_1(
       .R(1'b0),   // 1-bit reset
       .S(1'b0)    // 1-bit set
    );
+
+// ------------------------ pulse generator --------------------
+pulse_gen pulse_gen_inst (
+    .clk(clk_500m),
+    .clk_div(clk_125m),
+    .rst(~rstn),
+    .q(hp_gpio0)
+
+);
 
 endmodule
