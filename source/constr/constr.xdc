@@ -184,5 +184,5 @@ set_property IOSTANDARD LVCMOS15 [get_ports hp_gpio2]
 set_property IOSTANDARD LVCMOS15 [get_ports hp_clk]
 
 
-#create_clock -period 20.0 -name clk_50m -waveform {0.000 10.0} [get_ports clk50m_in]
+create_clock -period 20.0 -name clk_50m -waveform {0.000 10.0} [get_ports clk50m_in]
 create_clock -period 5.000 -name sys_clk_200m -waveform {0.000 2.50} [get_ports sys_clk_200m_p]

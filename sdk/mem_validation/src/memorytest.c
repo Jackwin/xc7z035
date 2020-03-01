@@ -75,14 +75,14 @@ void test_memory_range(struct memory_range_s *range) {
         xil_printf("         Base Address: 0x%lx \n\r",range->base);
         xil_printf("                 Size: 0x%lx bytes \n\r",range->size);
     #endif
-
-    status = Xil_TestMem32((u32*)range->base, 1024, 0xAAAA5555, XIL_TESTMEM_ALLMEMTESTS);
+    int size = 4096*4096*8;
+    status = Xil_TestMem32((u32*)range->base, size, 0xFFFF5555, XIL_TESTMEM_ALLMEMTESTS);
     print("          32-bit test: "); print(status == XST_SUCCESS? "PASSED!":"FAILED!"); print("\n\r");
 
-    status = Xil_TestMem16((u16*)range->base, 2048, 0xAA55, XIL_TESTMEM_ALLMEMTESTS);
+    status = Xil_TestMem16((u16*)range->base, size*2, 0xAA55, XIL_TESTMEM_ALLMEMTESTS);
     print("          16-bit test: "); print(status == XST_SUCCESS? "PASSED!":"FAILED!"); print("\n\r");
 
-    status = Xil_TestMem8((u8*)range->base, 4096, 0xA5, XIL_TESTMEM_ALLMEMTESTS);
+    status = Xil_TestMem8((u8*)range->base, size*4, 0xA5, XIL_TESTMEM_ALLMEMTESTS);
     print("           8-bit test: "); print(status == XST_SUCCESS? "PASSED!":"FAILED!"); print("\n\r");
 
 }

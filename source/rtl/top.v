@@ -25,7 +25,7 @@ module top (
     input           adc0_dco_p,
     input           adc0_dco_n,
     output          adc0_pd,
-    output reg      adc0_cs_n,
+    output          adc0_cs_n,
     //ADC1 
     input [5:0]     adc1_din_p,
     input [5:0]     adc1_din_n,
@@ -34,14 +34,14 @@ module top (
     input           adc1_dco_p,
     input           adc1_dco_n,
     output          adc1_pd,
-    output reg     adc1_cs_n,
+    output          adc1_cs_n,
 
     //AD9517
     output          ad9517_reset_n,   
     output          ad9517_pd_n,
     output          ad9517_ref_sel,
     output          ad9517_sync_n,
-    output reg      ad9517_cs_n,
+    output          ad9517_cs_n,
 
 
     //output          spi_cs_n,
@@ -81,7 +81,10 @@ wire        locked;
 wire        clk_200m;
 wire        clk_20m;
 wire        clk_800m;
-
+wire    sys_clk_100m;
+wire    sys_clk_locked;
+wire    sys_clk_200m;
+/*
 wire        spi_mosi;
 wire        spi_miso;
 wire        spi_oe, spi_oe_n;
@@ -95,6 +98,11 @@ wire [MISO_DATA_WIDTH:0]  spi_rd_data;
 reg         cfg_start;
 wire        cfg_start_vio;
 reg         cfg_start_r;
+*/
+wire        rst;
+wire        device_cfg_done;
+wire        device_cfg_start;
+wire        soft_rst;
 
 assign eth_mdio = ~mdio_t ? mdio_o : 1'bz;
 assign mdio_i = eth_mdio;
@@ -115,6 +123,8 @@ assign adc1_pd = 1'b0;
 assign c_pl_led131 = 1'b0;
 assign c_pl_led141 = 1'b0;
 
+assign rst = ~rstn;
+
  clk_wiz_sys clk_wiz_sys_i
    (
     // Clock out ports
@@ -127,6 +137,10 @@ assign c_pl_led141 = 1'b0;
     .clk50m_in(clk50m_in)
     ); 
 
+vio_sys vio_sys_inst (
+  .clk(clk50m_in),              // input wire clk
+  .probe_in0(locked)  // input wire [0 : 0] probe_in0
+);
 system bd_system(
 /*
     .rgmii_eth_rd(rgmii_eth_rd),
@@ -142,14 +156,44 @@ system bd_system(
     */
     );
 
-
+/*
 always @(posedge clk_20m) begin
     cfg_start_r <= cfg_start_vio;
     cfg_start <= ~cfg_start_vio & cfg_start_r;
 end
+*/
+device_cfg #(
+    .MOSI_DATA_WIDTH( MOSI_DATA_WIDTH),
+    .MISO_DATA_WIDTH(MISO_DATA_WIDTH),
+    .INSTR_HEADER_LEN(INSTR_HEADER_LEN)
+
+)device_cfg_inst (
+    .clk_20m(clk_20m),
+    .rst(rst),
+    .soft_rst(soft_rst),
+
+    .i_cfg_start(device_cfg_start),
+    .i_ad9517_locked(sys_clk_locked),
+    .o_cfg_done(device_cfg_done),
+    .ad9517_cs_n(ad9517_cs_n),
+    .adc0_cs_n(adc0_cs_n),
+    .adc1_cs_n(adc1_cs_n),
+    .spi_sclk(spi_sclk),
+    .spi_sdio(spi_sdio)
+);
+
+vio_0 vio_0_cfg (
+    .clk(clk_20m),                // input wire clk
+    .probe_in0(device_cfg_done),
+    .probe_out0(device_cfg_start),  // output wire [0 : 0] probe_out0
+    .probe_out1(soft_rst) // output wire [0 : 0] probe_out1
+    
+);
+
+
 
 //system_wrapper system_wrapper_i();
-
+/*
 wire    ad9517_spi_wr_cmd;
 wire    ad9517_spi_rd_cmd;
 wire [MOSI_DATA_WIDTH-1:0] ad9517_spi_wr_data;
@@ -304,12 +348,12 @@ ila_spi ila_spi_i (
 );
 
 vio_0 vio_0_cfg (
-  .clk(clk_200m),                // input wire clk
+  .clk(clk_20m),                // input wire clk
   .probe_out0(ad9517_cfg_start),  // output wire [0 : 0] probe_out0
   .probe_out1(adc0_cfg_start),  // output wire [0 : 0] probe_out1
   .probe_out2(adc1_cfg_start)
 );
-
+*/
 // IIC 
 wire           iic_busy;
 wire [15:0]    ad5339_wr_data;
@@ -326,7 +370,7 @@ wire           ad5339_rd_done;
 // ------------------------------------------- AD5339 ------------------------------------
 ad5339_cfg ad5339_cfg_i (
     .sys_clk(clk_20m),
-    .sys_rst(~rstn),
+    .sys_rst(rst),
     .device_addr(AD5339_DEVICE_ADDR),
     .iic_wr_data(ad5339_wr_data),
     .iic_wr_req(ad5339_wr_req),
@@ -368,16 +412,14 @@ vio_ad5339 vio_ad5339_i (
 
 trig trig_i (
     .sys_clk(clk_20m),
-    .sys_rst(~rstn),
+    .sys_rst(rst),
     .trig_in(trig_in),
     .trig_d_o(trig_d),
     .trig_rst_o(trig_rst)
 
 );
 
-wire    sys_clk_100m;
-wire    sys_clk_locked;
-wire    sys_clk_200m;
+
 /*
 IBUFDS #(
     .DIFF_TERM("TRUE"),       // Differential Termination
@@ -404,7 +446,7 @@ clk_wiz_ddr clk_wiz_ddr_i (
 // VCO = ref_in * CLKBOUT_MULT_F/DIVCLK_DIVIDE
 // clk0 = VCO / CLK0_DIVIDE
 // clk1 = VCO / CLK1_DIVIDE
-wire    sys_clk_200m;
+//wire    sys_clk_200m;
 wire    clk_125m;
 wire    clk_500m;
 IBUFDS #(
@@ -425,7 +467,7 @@ clock_gen #(
     .CLK1_DIVIDE(2)
 ) clock_gen_inst (
     .ref_clk(sys_clk_200m),
-    .rst(~rstn),
+    .rst(rst),
 
     .locked_o(sys_clk_locked),
     .clk0_o(clk_125m),
@@ -458,8 +500,10 @@ wire    dummy;
 */
 
 ad9434_data ad9434_data_0(
-    .rst(~rstn),
+    .rst(rst),
     .clk_200m_in(clk_200m),
+    .i_trig(pulse_gen_trig),
+    .i_us_capture(10'd10),
     .adc0_din_p(adc0_din_p),
     .adc0_din_n(adc0_din_n),
     .adc0_or_p(adc0_or_p),
@@ -469,8 +513,10 @@ ad9434_data ad9434_data_0(
 );
 
 ad9434_data ad9434_data_1(
-    .rst(~rstn),
+    .rst(rst),
     .clk_200m_in(clk_200m),
+    .i_trig(pulse_gen_trig),
+    .i_us_capture(10'd10),
     .adc0_din_p(adc1_din_p),
     .adc0_din_n(adc1_din_n),
     .adc0_or_p(adc1_or_p),
@@ -506,7 +552,7 @@ wire           pulse_gen_done;
 pulse_gen pulse_gen_inst (
     .clk(clk_500m),
     .clk_div(clk_125m),
-    .rst(~rstn),
+    .rst(rst),
     .pulse_width_i(pulse_width),
     .pulse_num_i(pulse_num),
     .gap_us_i(gap_us),

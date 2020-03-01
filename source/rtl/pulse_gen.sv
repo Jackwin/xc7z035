@@ -88,7 +88,7 @@ always_comb begin
             if (ns_cnt == 7'd124 & (us_cnt == (gap_us - 1)) & (pulse_cnt != (pulse_num - 1))) begin
                 ns = ZERO_INIT;
             end
-            else if (ns_cnt == 7'd124 & (us_cnt == (gap_us - 1))) begin
+            else if (ns_cnt == 7'd124 & (us_cnt == (gap_us - 1)) & (pulse_cnt == (pulse_num - 1)) begin
                 ns = DONE;
             end
         end
@@ -175,6 +175,7 @@ always_ff @(posedge clk_div) begin
 end
 
 logic   q1;
+
 OSERDESE2 #(
     .DATA_RATE_OQ("DDR"),   // DDR, SDR
     .DATA_RATE_TQ("SDR"),   // DDR, BUF, SDR
@@ -230,5 +231,20 @@ OBUF #(
     .O(q),     // Buffer output (connect directly to top-level port)
     .I(q1)      // Buffer input 
 );
+ 
+
+ila_pulse_gen ila_pulse_gen_ila (
+	.clk(clk_div), // input wire clk
+	.probe0(cs), // input wire [5:0]  probe0  
+	.probe1(multi_8), // input wire [7:0]  probe1 
+	.probe2(remain_8), // input wire [2:0]  probe2 
+	.probe3(f_cnt), // input wire [7:0]  probe3 
+	.probe4(pulse_cnt), // input wire [10:0]  probe4 
+	.probe5(ns_cnt), // input wire [6:0]  probe5 
+	.probe6(start_i), // input wire [0:0]  probe6 
+	.probe7(done) // input wire [0:0]  probe7
+);
+
+
 
 endmodule

@@ -3,6 +3,9 @@
 module ad9434_data (
     input           clk_200m_in,
     input           rst,
+    input           i_trig,
+    input [9:0]     i_us_capture,
+
     input [5:0]     adc0_din_p,
     input [5:0]     adc0_din_n,
     input           adc0_or_p,
@@ -258,14 +261,104 @@ always @(posedge adc_clk) begin
     adc_data2 <= adc_data_q2;
 end
 
+enum logic [3:0] {
+    IDLE = 4'b001,
+    CAPTURE = 4'b010,
+    STORE = 4'b100,
+    END = 4'b1000
+} cs, ns;
+logic [11:0]    adc_data;
+logic [7:0]     cnt;
+logic [9:0]     us_cnt;
+logic           store_start;
+logic           store_done; // store data to DDR in PS
+logic           cap_done;
+
+always_ff @(posedge clk_200m_in) begin
+    if (rst) begin
+        cs <= IDLE;
+    end
+    else begin
+        cs <= ns;
+    end
+end
+
+always_comb begin
+    ns = cs;
+    case(cs)
+        IDLE: begin
+            if (i_trig) begin
+                ns = CAPTURE;
+            end
+        end
+        CAPTURE: begin
+            if (us_cnt == i_us_capture) begin
+                ns = STORE;
+            end
+        end
+        STORE: begin
+            if (store_done) ns = END;
+        end
+        END: begin
+            ns = IDLE;
+        end
+        default: ns = IDLE;
+    endcase
+end
+
+always_ff @(posedge clk_200m_in) begin
+    if (rst) begin
+        cnt <= 0;
+        us_cnt <= 0;
+        cap_done <= 0;
+        store_start <= 0;
+    end
+    else begin
+        case(cs)
+            IDLE: begin
+                cnt <= 0;
+                us_cnt <= 0;
+                cap_done <= 0;
+                store_start <= 0;
+            end
+            CAPTURE: begin
+                if (cnt == 8'd199) begin
+                    cnt <= 0;
+                    us_cnt <= us_cnt + 1'b1;
+                end
+                else begin
+                    cnt <= cnt + 1;
+                end
+            end
+            STORE: begin
+                store_start <= 1;
+            end
+            END: begin
+                cap_done <= 1;
+            end
+            default: begin
+                cnt <= 0;
+                us_cnt <= 0;
+                cap_done <= 0;
+                store_start <= 0;
+            end
+        endcase
+    end
+end
+
+
+always_comb begin
+    adc_data = {adc_data1, adc_data2};
+end
+
 ila_adc0_ddr ila_adc0_ddr_i (
 	.clk(adc_clk), // input wire clk
 	.probe0(adc_data1), // input wire [5:0]  probe0  
 	.probe1(adc_data2), // input wire [5:0]  probe1 
 	.probe2(adc_or), // input wire [0:0]  probe2 
-	.probe3(rst), // input wire [0:0]  probe3 
-	.probe4(adc_or), // input wire [0:0]  probe4 
-	.probe5(adc_or) // input wire [0:0]  probe5
+	.probe3(i_trig), // input wire [0:0]  probe3 
+	.probe4(cap_done), // input wire [0:0]  probe4 
+	.probe5(store_start) // input wire [0:0]  probe5
 );
 
 endmodule

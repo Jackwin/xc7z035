@@ -13,7 +13,8 @@ module adc_cfg # (parameter
     input  logic [MISO_DATA_WIDTH-1:0]  i_spi_rd_data,
     input  logic                        i_spi_busy,
     input  logic                        i_cfg_start,
-    output logic                        o_cfg_go
+    output logic                        o_cfg_go,
+    output logic                        o_cfg_done
 
 );
 
@@ -68,12 +69,18 @@ always_comb begin
     o_spi_wr_cmd = spi_wr_cmd;
     o_spi_rd_cmd = spi_rd_cmd;
     o_spi_wr_data = spi_wr_data;
+    o_cfg_done = cfg_done;
 end
 
-
+/*
 always_ff @(posedge clk) begin
     cfg_start_r <= i_cfg_start;
     cfg_start <= ~cfg_start_r & i_cfg_start;
+end
+*/
+
+always_ff @(posedge clk) begin
+    cfg_start <= i_cfg_start;
 end
 
 always_ff @(posedge clk) begin
