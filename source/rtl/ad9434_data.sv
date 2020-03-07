@@ -273,6 +273,15 @@ logic [9:0]     us_cnt;
 logic           store_start;
 logic           store_done; // store data to DDR in PS
 logic           cap_done;
+logic           trig;
+logic           i_trig_r; 
+
+// clock domain crossing
+always_ff @(posedge clk_200m_in) begin
+    i_trig_r <= i_trig;
+    trig <= i_trig_r;
+end
+
 
 always_ff @(posedge clk_200m_in) begin
     if (rst) begin
@@ -287,7 +296,7 @@ always_comb begin
     ns = cs;
     case(cs)
         IDLE: begin
-            if (i_trig) begin
+            if (trig) begin
                 ns = CAPTURE;
             end
         end
@@ -351,12 +360,29 @@ always_comb begin
     adc_data = {adc_data1, adc_data2};
 end
 
+ram_define # (
+    .USE_RAM_NUM(1),
+    .RAM_ADDR_WIDTH(12),
+    .RAM_DATA_WIDTH(16),
+    .MEM_TYPE("block")
+    
+)ram_inst (
+    .clk(),
+    .wea(),
+    .ena(),
+    .addra(),
+    .dina(),
+    .enb(),
+    .addrb(),
+    .doutb()
+);
+
 ila_adc0_ddr ila_adc0_ddr_i (
 	.clk(adc_clk), // input wire clk
 	.probe0(adc_data1), // input wire [5:0]  probe0  
 	.probe1(adc_data2), // input wire [5:0]  probe1 
 	.probe2(adc_or), // input wire [0:0]  probe2 
-	.probe3(i_trig), // input wire [0:0]  probe3 
+	.probe3(trig), // input wire [0:0]  probe3 
 	.probe4(cap_done), // input wire [0:0]  probe4 
 	.probe5(store_start) // input wire [0:0]  probe5
 );

@@ -88,7 +88,7 @@ always_comb begin
             if (ns_cnt == 7'd124 & (us_cnt == (gap_us - 1)) & (pulse_cnt != (pulse_num - 1))) begin
                 ns = ZERO_INIT;
             end
-            else if (ns_cnt == 7'd124 & (us_cnt == (gap_us - 1)) & (pulse_cnt == (pulse_num - 1)) begin
+            else if (ns_cnt == 7'd124 & (us_cnt == (gap_us - 1)) & (pulse_cnt == (pulse_num - 1))) begin
                 ns = DONE;
             end
         end

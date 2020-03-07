@@ -141,19 +141,97 @@ vio_sys vio_sys_inst (
   .clk(clk50m_in),              // input wire clk
   .probe_in0(locked)  // input wire [0 : 0] probe_in0
 );
+
+//---------------------------------------------------
+
+wire            hp0_arready;
+wire            hp0_awready;
+wire [5:0]      hp0_bid;
+wire [1:0]      hp0_bresp;
+wire            hp0_bvalid;
+wire [63:0]     hp0_rdata;
+wire [5:0]      hp0_rid;
+wire            hp0_rlast;
+wire [1:0]      hp0_rresp;
+wire            hp0_rvalid;
+wire            hp0_wready;
+ 
+wire [31:0]     hp0_araddr;
+wire [1:0]      hp0_arburst;
+wire [3:0]      hp0_arcache;
+wire [5:0]      hp0_arid;
+wire [3:0]      hp0_arlen;
+wire [1:0]      hp0_arlock;
+wire [2:0]      hp0_arprot;
+wire [3:0]      hp0_arqos;
+wire [2:0]      hp0_arsize;
+wire            hp0_arvalid;
+
+wire [31:0]     hp0_awaddr;
+wire [1:0]      hp0_awburst;
+wire [3:0]      hp0_awcache;
+wire [5:0]      hp0_awid;
+wire [3:0]      hp0_awlen;
+wire [1:0]      hp0_awlock;
+wire [2:0]      hp0_awprot;
+wire [3:0]      hp0_awqos;
+wire [2:0]      hp0_awsize;
+wire            hp0_awvalid;
+wire            hp0_bready;
+wire            hp0_rready;
+wire [63:0]     hp0_wdata;
+wire [5:0]      hp0_wid;
+wire            hp0_wlast;
+wire [7:0]      hp0_wstrb;
+wire            hp0_wvalid;
+
 system bd_system(
-/*
-    .rgmii_eth_rd(rgmii_eth_rd),
-    .rgmii_eth_rx_ctl(rgmii_eth_rx_ctl),
-    .rgmii_eth_rxc(rgmii_eth_rxc),
-    .rgmii_eth_td(rgmii_eth_td),
-    .rgmii_eth_tx_ctl(rgmii_eth_tx_ctl),
-    .rgmii_eth_txc(rgmii_eth_txc),
-    .eth_mdio_mdc(eth_mdio_mdc),
-    .eth_mdio_mdio_i(mdio_i),
-    .eth_mdio_mdio_o(mdio_o),
-    .eth_mdio_mdio_t(mdio_t)
-    */
+    .clk_300_o(),
+    .reset_300_o(),
+    //AXI4 read addr
+    .hp0_araddr(hp0_araddr),
+    .hp0_arburst(hp0_arburst),
+    .hp0_arcache(hp0_arcache),
+    .hp0_arid(hp0_arid),
+    .hp0_arlen(hp0_arlen),
+    .hp0_arlock(hp0_arlock),
+    .hp0_arprot(hp0_arprot),
+    .hp0_arqos(hp0_arqos),
+    .hp0_arready(hp0_arready),
+    .hp0_arsize(hp0_arsize),
+    .hp0_arvalid(hp0_arvalid),
+    //AXI4 write addr
+    .hp0_awaddr(hp0_awaddr),
+    .hp0_awburst(hp0_awburst),
+    .hp0_awcache(hp0_awcache),
+    .hp0_awid(hp0_awid),
+    .hp0_awlen(hp0_awlen),
+    .hp0_awlock(hp0_awlock),
+    .hp0_awprot(hp0_awprot),
+    .hp0_awqos(hp0_awqos),
+    .hp0_awready(hp0_awready),
+    .hp0_awsize(hp0_awsize),
+    .hp0_awvalid(hp0_awvalid),
+
+    .hp0_bid(hp0_bid),
+    .hp0_bready(hp0_bready),
+    .hp0_bresp(hp0_bresp),
+    .hp0_bvalid(hp0_bvalid),
+    //AXI4 read data interface
+    .hp0_rdata(hp0_rdata),
+    .hp0_rid(hp0_rid),
+    .hp0_rlast(hp0_rlast),
+    .hp0_rready(hp0_rready),
+    .hp0_rresp(hp0_rresp),
+    .hp0_rvalid(hp0_bvalid),
+    //AXI4 write data interface
+    .hp0_wdata(hp0_wdata),
+    .hp0_wid(hp0_wid),
+    .hp0_wlast(hp0_wlast),
+    .hp0_wready(hp0_ready),
+    .hp0_wstrb(hp0_wstrb),
+    .hp0_wvalid(hp0_wvalid)
+    
     );
 
 /*
