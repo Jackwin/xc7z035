@@ -20,15 +20,73 @@ logic [1:0]     hp0_awburst;
 logic [2:0]     hp0_awprot;
 logic [3:0]     hp0_awcache;
 
-logic [63:0]    hp0_wdata,
-logic [15:0]    hp0_wstrb,
-logic           hp0_wlast,
-logic           hp0_wvalid,
-logic           hp0_wready,
+logic [63:0]    hp0_wdata;
+logic [7:0]     hp0_wstrb;
+logic           hp0_wlast;
+logic           hp0_wvalid;
+logic           hp0_wready;
 
-logic [1:0]     hp0_bresp,
-logic           hp0_bvalid,
-logic           hp0_bready
+logic [1:0]     hp0_bresp;
+logic           hp0_bvalid;
+logic           hp0_bready;
+
+
+logic           wr_data_valid;
+logic [63:0]    wr_data;
+logic           wr_data_ready;
+logic           wr_data_finish;
+
+
+
+
+initial begin
+    clk = 0;
+    forever begin
+        # 2.5 clk = ~clk;
+    end
+end
+
+initial begin
+    rst = 1;
+    #100;
+    rst = 0;
+end
+
+initial begin
+    wr_cmd_addr <= 0;
+    wr_cmd_length <= 0;
+    wr_cmd_req <= 0;
+    wr_data_valid <= 0;
+    wr_data <= 64'h0001020304050607;
+    #100;
+
+    @(posedge clk);
+    wr_cmd_req <= 1;
+    wr_cmd_length <= 16;
+    wait (wr_cmd_ack);
+    @(posedge clk);
+    wr_cmd_req <= 0;
+
+    for (int m = 0; m < 2; m++) begin
+        wait (wr_data_ready);
+        @(posedge clk) begin
+            wr_data <= wr_data + 64'h0101010101010101;
+            wr_data_valid <= 1;
+        end
+    end
+
+    @(posedge clk);
+    wr_data_valid <= 0;
+    wr_data <= 0;
+
+    #200;
+    $stop;
+
+
+
+
+
+end
 
 
 
@@ -54,10 +112,10 @@ datamover_ctrl datamover_ctrl_i (
     .o_rd_data(),
     
     //write data interface
-    .i_wr_valid(),
-    .i_wr_data(),
-    .o_wr_ready(),
-    .o_write_finish(),
+    .i_wr_valid(wr_data_valid),
+    .i_wr_data(wr_data),
+    .o_wr_ready(wr_data_ready),
+    .o_write_finish(wr_data_finish),
 
     
     //AXI4 read addr interface

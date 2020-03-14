@@ -58,11 +58,11 @@ module datamover_ctrl (
     output [1:0]    hp0_awburst,
     output [2:0]    hp0_awprot,
     output [3:0]    hp0_awcache,
-   // output [3:0]    hp0_awuser,   
+    output [3:0]    hp0_awuser,   
 
     //AXI4 write data interface
     output [63:0]   hp0_wdata,
-    output [15:0]   hp0_wstrb,
+    output [7:0]    hp0_wstrb,
     output          hp0_wlast,
     output          hp0_wvalid,
     input           hp0_wready,
@@ -113,12 +113,17 @@ logic   s2mm_wr_done;
 
 localparam   WR_EOF_VAL = 4'b1101;
 
+// BTT is 8bit  256Byte
+// max burst length 32 data_width 8Byte 32x8 = 256byte
+
 always_comb begin
     fifo_s2mm_din = i_wr_data;
     fifo_s2mm_wr_en = i_wr_valid;
     o_wr_ready = ~fifo_s2mm_full;
 
-    fifo_s2mm_rd_en = hp0_wready & ~fifo_s2mm_empty;
+    fifo_s2mm_rd_en = user_s2mm_tready & ~fifo_s2mm_empty;
+    user_s2mm_tdata = fifo_s2mm_dout;
+    user_s2mm_tlast = 0;
     //hp0_wdata = fifo_s2mm_dout;
    // hp0_wlast = 0;
 end
@@ -128,7 +133,7 @@ always_comb begin
 end
 
 logic [20:0]    s2mm_wr_cmd_num;
-logic [2:0]     s2mm_last_wr_cmd_byte_num;
+logic [5:0]     s2mm_last_wr_num; // For the last burst, the number of wr_data
 logic [31:0]    s2mm_wr_start_addr;
 logic           s2mm_wr_last_btt_flag;
 logic [23:0]    s2mm_wr_length;
@@ -136,16 +141,25 @@ logic [23:0]    s2mm_wr_length;
 always_ff @(posedge clk) begin
     if (rst) begin
         s2mm_wr_cmd_num <= 0;
-        s2mm_last_wr_cmd_byte_num <= 0;
+        s2mm_last_wr_num <= 0;
         s2mm_wr_start_addr <= 0;
     end
     else begin
         if (i_wr_cmd_req & wr_cmd_ack) begin
             s2mm_wr_start_addr <= i_s2mm_wr_cmd_addr;
             s2mm_wr_length = i_s2mm_wr_cmd_length;
-            s2mm_wr_cmd_num <= i_s2mm_wr_cmd_length[23:8] + |i_s2mm_wr_cmd_length[7:0];
-            s2mm_last_wr_cmd_byte_num <= i_s2mm_wr_cmd_length[2:0];
+            s2mm_wr_cmd_num <= i_s2mm_wr_cmd_length[22:8] + |i_s2mm_wr_cmd_length[7:0]; // one wr cmd corresponds to 256B
+            
             s2mm_wr_last_btt_flag <= |i_s2mm_wr_cmd_length[2:0];
+
+            if (i_s2mm_wr_cmd_length[7:0] == 'h0) begin //multiple of 256B
+                s2mm_last_wr_num <= 6'd32;    
+            end else if (i_s2mm_wr_cmd_length[2:0] == 'h0) begin // multiple of 8B
+                s2mm_last_wr_num <= i_s2mm_wr_cmd_length[22:3];
+            end else begin
+                s2mm_last_wr_num <= i_s2mm_wr_cmd_length[22:3] + 1;
+            end
+
         end
     end
 end
@@ -223,9 +237,7 @@ always_ff @(posedge clk) begin
     end
 end
 
-logic           s2mm_wr_eof;
-logic [31:0]    s2mm_wr_saddr;
-logic [7:0]     s2mm_wr_btt;
+
 always_ff @(posedge clk) begin
     if (rst) begin
         s2mm_wr_eof <= 0;
@@ -278,17 +290,19 @@ always_ff @(posedge clk) begin
         s2mm_wr_burst_cnt <= 0;
         user_s2mm_tvalid <= 0;
         user_s2mm_tkeep <= 0;
+        s2mm_wr_data_cnt <= 0;
     end
     else begin
         if (fifo_s2mm_rd_en) begin
-            if (s2mm_wr_burst_cnt == s2mm_wr_cmd_num - 1 & s2mm_wr_data_cnt == (s2mm_last_wr_cmd_byte_num - 1)) begin // The last write
+            //TODO user_s2mm_tvalid is not correct
+            if (s2mm_wr_burst_cnt == s2mm_wr_cmd_num - 1 & s2mm_wr_data_cnt == (s2mm_last_wr_num - 1)) begin // The last write
                 user_s2mm_tvalid <= 0;
             end
             else begin
                 user_s2mm_tvalid <= 1;
             end
 
-            if (s2mm_wr_burst_cnt == (s2mm_wr_cmd_num - 1) & s2mm_wr_data_cnt == (s2mm_last_wr_cmd_byte_num - 1)) begin
+            if (s2mm_wr_burst_cnt == (s2mm_wr_cmd_num - 1) & s2mm_wr_data_cnt == (s2mm_last_wr_num - 1)) begin
                 s2mm_wr_burst_cnt <= 0;
                 s2mm_wr_data_cnt <= 0;
             end
