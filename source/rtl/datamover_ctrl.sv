@@ -6,7 +6,7 @@ module datamover_ctrl (
     input           rst,
     
     //read cmd interface 
-    input [31:0]   i_rd_cmd_data,
+    input [31:0]    i_rd_cmd_data,
     input           i_rd_cmd_req,
     output          o_rd_cmd_ack,
     
@@ -14,7 +14,7 @@ module datamover_ctrl (
     input [31:0]    i_s2mm_wr_cmd_addr,
     input [22:0]    i_s2mm_wr_cmd_length,
     input           i_wr_cmd_req,
-    output logic          o_wr_cmd_ack,
+    output logic    o_wr_cmd_ack,
     
     //read data interface
     input           i_rd_ready,
@@ -60,7 +60,7 @@ module datamover_ctrl (
     output [3:0]    hp0_awcache,
    // output [3:0]    hp0_awuser,   
 
-    //AXI4 read data interface
+    //AXI4 write data interface
     output [63:0]   hp0_wdata,
     output [15:0]   hp0_wstrb,
     output          hp0_wlast,
