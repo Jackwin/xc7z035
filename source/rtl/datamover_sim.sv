@@ -14,7 +14,7 @@ logic           hp0_awready;
 logic           hp0_awvalid;
 logic [3:0]     hp0_awid;
 logic [31:0]    hp0_awaddr;
-logic [3:0]     hp0_awlen;
+logic [7:0]     hp0_awlen;
 logic [2:0]     hp0_awsize;
 logic [1:0]     hp0_awburst;
 logic [2:0]     hp0_awprot;
@@ -37,7 +37,7 @@ logic           wr_data_ready;
 logic           wr_data_finish;
 
 
-
+logic [31:0]    start_addr;
 
 initial begin
     clk = 0;
@@ -58,8 +58,9 @@ initial begin
     wr_cmd_req <= 0;
     wr_data_valid <= 0;
     wr_data <= 64'h0001020304050607;
+    start_addr <= 0;
     #100;
-
+/*
     @(posedge clk);
     wr_cmd_req <= 1;
     wr_cmd_length <= 16;
@@ -78,15 +79,47 @@ initial begin
     @(posedge clk);
     wr_data_valid <= 0;
     wr_data <= 0;
-
+*/
+    start_addr <= 8;
+    for (int m = 0; m < 32; m++) begin
+        /*
+        if (m % 8 == 0) begin
+          start_addr = m;  
+        end else begin
+            //start_addr = start_addr + (m/8 + 1)*8 ;
+            start_addr = (m/8 + 1)*8 ;
+        end
+        */
+        wr_cmd(start_addr,m+1);
+        wait (wr_data_finish);
+    end
+    
     #200;
     $stop;
-
-
-
-
-
 end
+
+task wr_cmd();
+    input [15:0]    wr_start_addr;
+    input [22:0]    wr_length;
+    @(posedge clk);
+    wr_cmd_req <= 1;
+    wr_cmd_length <= wr_length;
+    wr_cmd_addr <= wr_start_addr;
+    wait (wr_cmd_ack);
+    @(posedge clk);
+    wr_cmd_req <= 0;
+
+    for (int m = 0; m < wr_length[22:3] + |wr_length[2:0]; m++) begin
+        wait (wr_data_ready);
+        @(posedge clk) begin
+            //wr_data <= wr_data + 64'h0101010101010101;
+            wr_data_valid <= 1;
+        end
+    end
+
+    @(posedge clk);
+    wr_data_valid <= 0;
+endtask
 
 
 
