@@ -1,19 +1,28 @@
 
 `timescale 1ns/1ps
 module ad9434_data (
-    input           clk_200m_in,
+    input           clk_200m,
     input           rst,
     input           i_trig,
     input [9:0]     i_us_capture,
 
-    input [5:0]     adc0_din_p,
-    input [5:0]     adc0_din_n,
-    input           adc0_or_p,
-    input           adc0_or_n,
-    input           adc0_dco_p,
-    input           adc0_dco_n
+    input [5:0]     i_adc0_din_p,
+    input [5:0]     i_adc0_din_n,
+    input           i_adc0_or_p,
+    input           i_adc0_or_n,
+    input           i_adc0_dco_p,
+    input           i_adc0_dco_n,
+    
+    output logic    o_bram_clk,
+    output logic    o_bram_rst,
+    output logic [31:0] o_bram_addr,
+    output logic [31:0] o_bram_data,
+    output logic    o_bram_ena,
+    output logic    o_bram_wea
+
 );
 
+localparam      CLK_MODE = "BUR";
 logic           dco;
 logic           dco_bufr;
 logic [5:0]     data_bufds;
@@ -21,7 +30,12 @@ logic [5:0]     adc_data_q1;
 logic [5:0]     adc_data_q2;
 logic           adc_or;
 logic [5:0]     data_idelay;
-localparam      CLK_MODE = "BUR";
+
+logic [31:0]    ram_addr;
+logic [31:0]    ram_data;
+logic           ram_ena;
+logic           ram_wea;
+
 
 /*                _ _ _         _ _ _
                  /     \       /     \
@@ -42,8 +56,8 @@ IBUFDS #(
     .IOSTANDARD("LVDS")     // Specify the input I/O standard
 ) IBUFDS_dco (
     .O(dco),  // Buffer output
-    .I(adc0_dco_p),  // Diff_p buffer input (connect directly to top-level port)
-    .IB(adc0_dco_n) // Diff_n buffer input (connect directly to top-level port)
+    .I(i_adc0_dco_p),  // Diff_p buffer input (connect directly to top-level port)
+    .IB(i_adc0_dco_n) // Diff_n buffer input (connect directly to top-level port)
 );
 
 IBUFDS #(
@@ -52,8 +66,8 @@ IBUFDS #(
     .IOSTANDARD("LVDS")     // Specify the input I/O standard
 ) IBUFDS_or (
     .O(adc_or),  // Buffer output
-    .I(adc0_or_p),  // Diff_p buffer input (connect directly to top-level port)
-    .IB(adc0_or_n) // Diff_n buffer input (connect directly to top-level port)
+    .I(i_adc0_or_p),  // Diff_p buffer input (connect directly to top-level port)
+    .IB(i_adc0_or_n) // Diff_n buffer input (connect directly to top-level port)
 );
 
 
@@ -160,7 +174,7 @@ else begin:idelay_mode
     IDELAYE2_clk (
         .CNTVALUEOUT(), // 5-bit output: Counter value output
         .DATAOUT(dco_idelay),         // 1-bit output: Delayed data output
-        .C(clk_200m_in),                     // 1-bit input: Clock input
+        .C(clk_200m),                     // 1-bit input: Clock input
         .CE(1'b0),                   // 1-bit input: Active high enable increment/decrement input
         .CINVCTRL(1'b0),       // 1-bit input: Dynamic clock inversion input
         .CNTVALUEIN(),   // 5-bit input: Counter value input
@@ -178,7 +192,7 @@ end
 
 IDELAYCTRL IDELAYCTRL_dco (
     .RDY(),       // 1-bit output: Ready output
-    .REFCLK(clk_200m_in), // 1-bit input: Reference clock input
+    .REFCLK(clk_200m), // 1-bit input: Reference clock input
     .RST(rst)        // 1-bit input: Active high reset input
  );
  
@@ -193,8 +207,8 @@ generate
             .IOSTANDARD("LVDS")     // Specify the input I/O standard
         ) IBUFDS_adc (
             .O(data_bufds[i]),  // Buffer output
-            .I(adc0_din_p[i]),  // Diff_p buffer input (connect directly to top-level port)
-            .IB(adc0_din_n[i]) // Diff_n buffer input (connect directly to top-level port)
+            .I(i_adc0_din_p[i]),  // Diff_p buffer input (connect directly to top-level port)
+            .IB(i_adc0_din_n[i]) // Diff_n buffer input (connect directly to top-level port)
         );
     end
 endgenerate
@@ -216,7 +230,7 @@ generate
     IDELAYE2_data (
         .CNTVALUEOUT(), // 5-bit output: Counter value output
         .DATAOUT(data_idelay[i]),         // 1-bit output: Delayed data output
-        .C(clk_200m_in),                     // 1-bit input: Clock input
+        .C(clk_200m),                     // 1-bit input: Clock input
         .CE(1'b0),                   // 1-bit input: Active high enable increment/decrement input
         .CINVCTRL(1'b0),       // 1-bit input: Dynamic clock inversion input
         .CNTVALUEIN(),   // 5-bit input: Counter value input
@@ -260,7 +274,7 @@ always @(posedge adc_clk) begin
     adc_data1 <= adc_data_q1;
     adc_data2 <= adc_data_q2;
 end
-
+//-------------------------------------
 enum logic [3:0] {
     IDLE = 4'b001,
     CAPTURE = 4'b010,
@@ -270,20 +284,24 @@ enum logic [3:0] {
 logic [11:0]    adc_data;
 logic [7:0]     cnt;
 logic [9:0]     us_cnt;
-logic           store_start;
+logic           store_ena;
 logic           store_done; // store data to DDR in PS
 logic           cap_done;
 logic           trig;
-logic           i_trig_r; 
+logic           i_trig_r;
+
+logic           store_ena_sync;
+logic           store_done_sync;
+
 
 // clock domain crossing
-always_ff @(posedge clk_200m_in) begin
+always_ff @(posedge clk_200m) begin
     i_trig_r <= i_trig;
     trig <= i_trig_r;
 end
 
 
-always_ff @(posedge clk_200m_in) begin
+always_ff @(posedge clk_200m) begin
     if (rst) begin
         cs <= IDLE;
     end
@@ -315,12 +333,12 @@ always_comb begin
     endcase
 end
 
-always_ff @(posedge clk_200m_in) begin
+always_ff @(posedge clk_200m) begin
     if (rst) begin
         cnt <= 0;
         us_cnt <= 0;
         cap_done <= 0;
-        store_start <= 0;
+        store_ena <= 0;
     end
     else begin
         case(cs)
@@ -328,10 +346,10 @@ always_ff @(posedge clk_200m_in) begin
                 cnt <= 0;
                 us_cnt <= 0;
                 cap_done <= 0;
-                store_start <= 0;
+                store_ena <= 0;
             end
             CAPTURE: begin
-                if (cnt == 8'd199) begin
+                if (cnt == 8'd199) begin  // 1us
                     cnt <= 0;
                     us_cnt <= us_cnt + 1'b1;
                 end
@@ -340,7 +358,7 @@ always_ff @(posedge clk_200m_in) begin
                 end
             end
             STORE: begin
-                store_start <= 1;
+                store_ena <= 1;
             end
             END: begin
                 cap_done <= 1;
@@ -349,33 +367,50 @@ always_ff @(posedge clk_200m_in) begin
                 cnt <= 0;
                 us_cnt <= 0;
                 cap_done <= 0;
-                store_start <= 0;
+                store_ena <= 0;
             end
         endcase
     end
 end
 
-
 always_comb begin
     adc_data = {adc_data1, adc_data2};
+    o_bram_clk = adc_clk;
+    o_bram_rst = rst;
+    o_bram_addr = ram_addr;
+    o_bram_data = ram_data;
+    o_bram_ena = ram_ena;
+    o_bram_wea = ram_wea;
+
+    ram_ena = store_ena_sync;
+    ram_wea = store_ena_sync;
+    
 end
 
-ram_define # (
-    .USE_RAM_NUM(1),
-    .RAM_ADDR_WIDTH(12),
-    .RAM_DATA_WIDTH(16),
-    .MEM_TYPE("block")
-    
-)ram_inst (
-    .clk(),
-    .wea(),
-    .ena(),
-    .addra(),
-    .dina(),
-    .enb(),
-    .addrb(),
-    .doutb()
-);
+
+always_ff @(posedge adc_clk) begin
+    store_ena_sync <= store_ena;
+    store_done_sync <= store_done;
+end
+
+always_ff @(posedge adc_clk) begin
+    if (rst) begin
+        ram_addr <= 0;
+    end 
+    else begin
+        if (store_ena_sync) begin
+            ram_addr <= ram_addr + 1'b1;
+        end
+        else if (store_done_sync) begin
+            ram_addr <= 0;
+        end
+    end
+end
+
+
+
+
+
 
 ila_adc0_ddr ila_adc0_ddr_i (
 	.clk(adc_clk), // input wire clk
@@ -384,7 +419,7 @@ ila_adc0_ddr ila_adc0_ddr_i (
 	.probe2(adc_or), // input wire [0:0]  probe2 
 	.probe3(trig), // input wire [0:0]  probe3 
 	.probe4(cap_done), // input wire [0:0]  probe4 
-	.probe5(store_start) // input wire [0:0]  probe5
+	.probe5(store_ena) // input wire [0:0]  probe5
 );
 
 endmodule

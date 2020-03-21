@@ -104,6 +104,19 @@ wire        device_cfg_done;
 wire        device_cfg_start;
 wire        soft_rst;
 
+// --------------------------------------
+// ADC BRAM
+
+wire [31:0] adc0_bram_addr;
+wire        adc0_bram_clk;
+wire [31:0] adc0_bram_din;
+wire [31:0] adc0_bram_dout;
+wire        adc0_bram_ena;
+wire        adc0_bram_rst;
+wire        adc0_bram_wea;
+
+
+
 assign eth_mdio = ~mdio_t ? mdio_o : 1'bz;
 assign mdio_i = eth_mdio;
 
@@ -125,21 +138,17 @@ assign c_pl_led141 = 1'b0;
 
 assign rst = ~rstn;
 
- clk_wiz_sys clk_wiz_sys_i
-   (
-    // Clock out ports
-    .clk_200m(clk_200m),     // output clk_200m
+clk_wiz_sys clk_wiz_sys_i (
+    .clk_200m(clk_200m),
     .clk_20m(clk_20m),
-    // Status and control signals
-    .resetn(rstn), // input resetn
-    .locked(locked),       // output locked
-   // Clock in ports
+    .resetn(rstn), 
+    .locked(locked),
     .clk50m_in(clk50m_in)
-    ); 
+); 
 
 vio_sys vio_sys_inst (
-  .clk(clk50m_in),              // input wire clk
-  .probe_in0(locked)  // input wire [0 : 0] probe_in0
+    .clk(clk50m_in),
+    .probe_in0(locked)
 );
 
 //---------------------------------------------------
@@ -230,9 +239,17 @@ system bd_system(
     .hp0_wlast(hp0_wlast),
     .hp0_wready(hp0_ready),
     .hp0_wstrb(hp0_wstrb),
-    .hp0_wvalid(hp0_wvalid)
+    .hp0_wvalid(hp0_wvalid),
+    //ADC BRAM
+    .adc_bram_addr(adc0_bram_addr),
+    .adc_bram_clk(adc0_bram_clk),
+    .adc_bram_din(adc0_bram_din),
+    .adc_bram_dout(adc0_bram_dout),
+    .adc_bram_en(adc0_bram_ena),
+    .adc_bram_rst(adc0_bram_rst),
+    .adc_bram_we(adc0_bram_wea)
     
-    );
+);
 
 /*
 always @(posedge clk_20m) begin
@@ -559,48 +576,38 @@ vio_sys vio_sys_i (
 );
 
 // --------------------- ADC ---------------------------
-
-/*
-wire    dummy;
- top5x2_7to1_ddr_rx # (
-     .D(6),
-     .N(1)
-
- ) adc0 (
-	.reset(~rstn),					// reset (active high)
-    .refclkin(clk_200m),				// Reference clock for input delay control
-    .clkin_p(adc0_dco_p),  
-    .clkin_n(adc0_dco_n),			// lvds channel 1 clock input
-    .datain_p(adc0_din_p), 
-    .datain_n(adc0_din_n),			// lvds channel 1 data inputs
-    .dummy(dummy)
-) ; 				// Dummy output for test
-*/
-
 ad9434_data ad9434_data_0(
     .rst(rst),
-    .clk_200m_in(clk_200m),
+    .clk_200m(clk_200m),
     .i_trig(pulse_gen_trig),
     .i_us_capture(10'd10),
-    .adc0_din_p(adc0_din_p),
-    .adc0_din_n(adc0_din_n),
-    .adc0_or_p(adc0_or_p),
-    .adc0_or_n(adc0_or_n),
-    .adc0_dco_p(adc0_dco_p),
-    .adc0_dco_n(adc0_dco_n)
+    .i_adc0_din_p(adc0_din_p),
+    .i_adc0_din_n(adc0_din_n),
+    .i_adc0_or_p(adc0_or_p),
+    .i_adc0_or_n(adc0_or_n),
+    .i_adc0_dco_p(adc0_dco_p),
+    .i_adc0_dco_n(adc0_dco_n),
+    
+    .o_bram_clk(adc0_bram_clk),
+    .o_bram_rst(adc0_bram_rst),
+    .o_bram_addr(adc0_bram_addr),
+    .o_bram_data(adc0_bram_din),
+    .o_bram_wea(adc0_bram_wea),
+    .o_bram_ena(adc0_bram_ena)
+
 );
 
 ad9434_data ad9434_data_1(
     .rst(rst),
-    .clk_200m_in(clk_200m),
+    .clk_200m(clk_200m),
     .i_trig(pulse_gen_trig),
     .i_us_capture(10'd10),
-    .adc0_din_p(adc1_din_p),
-    .adc0_din_n(adc1_din_n),
-    .adc0_or_p(adc1_or_p),
-    .adc0_or_n(adc1_or_n),
-    .adc0_dco_p(adc1_dco_p),
-    .adc0_dco_n(adc1_dco_n)
+    .i_adc0_din_p(adc1_din_p),
+    .i_adc0_din_n(adc1_din_n),
+    .i_adc0_or_p(adc1_or_p),
+    .i_adc0_or_n(adc1_or_n),
+    .i_adc0_dco_p(adc1_dco_p),
+    .i_adc0_dco_n(adc1_dco_n)
 );
 
 // -------------------------- HP GPIO ---------------------------
