@@ -6,16 +6,22 @@ module datamover_top (
     input           rst,
     
     //read cmd interface 
+        /*
     input [31:0]    i_mm2s_rd_cmd_addr,
     input [8:0]     i_mm2s_rd_cmd_length,
     
     input           i_rd_cmd_req,
     output          o_rd_cmd_ack,
+    */
+
+    input           i_mm2s_rd_cmd_tvalid,
+    input [71:0]    i_mm2s_rd_cmd_tdata,
+    output          o_mm2s_rd_cmd_tready,
     
     //write cmd interface
-    input [3:0]     i_s2mm_wr_cmd_eof;
-    input [31:0]    i_s2mm_wr_cmd_addr,
-    input [8:0]     i_s2mm_wr_cmd_length,//512byte
+    //input [3:0]     i_s2mm_wr_cmd_eof;
+    //input [31:0]    i_s2mm_wr_cmd_addr,
+    //input [8:0]     i_s2mm_wr_cmd_length,//512byte
 
     input           i_s2mm_wr_cmd_tvalid,
     input [71:0]    i_s2mm_wr_cmd_tdata,
@@ -40,7 +46,6 @@ module datamover_top (
     output              o_s2mm_sts_tkeep,
     output              o_s2mm_sts_tlast,
 
-    
     //AXI4 read addr interface
     input           hp0_arready,
     output          hp0_arvalid,
