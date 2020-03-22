@@ -164,7 +164,7 @@ wire [5:0]      hp0_rid;
 wire            hp0_rlast;
 wire [1:0]      hp0_rresp;
 wire            hp0_rvalid;
-wire            hp0_wready;
+wire            hp0_rready;
  
 wire [31:0]     hp0_araddr;
 wire [1:0]      hp0_arburst;
@@ -187,13 +187,13 @@ wire [2:0]      hp0_awprot;
 wire [3:0]      hp0_awqos;
 wire [2:0]      hp0_awsize;
 wire            hp0_awvalid;
-wire            hp0_bready;
-wire            hp0_rready;
+
 wire [63:0]     hp0_wdata;
 wire [5:0]      hp0_wid;
 wire            hp0_wlast;
 wire [7:0]      hp0_wstrb;
 wire            hp0_wvalid;
+
 
 wire            user_mm2s_rd_cmd_tvalid;
 wire            user_mm2s_rd_cmd_tready;
