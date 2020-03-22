@@ -152,7 +152,8 @@ vio_sys vio_sys_inst (
 );
 
 //---------------------------------------------------
-
+// data mover signals
+// --------------------------------------------------
 wire            hp0_arready;
 wire            hp0_awready;
 wire [5:0]      hp0_bid;
@@ -193,6 +194,28 @@ wire [5:0]      hp0_wid;
 wire            hp0_wlast;
 wire [7:0]      hp0_wstrb;
 wire            hp0_wvalid;
+
+wire            user_mm2s_rd_cmd_tvalid;
+wire            user_mm2s_rd_cmd_tready;
+wire [71:0]     user_mm2s_rd_cmd_tdata;
+wire [63:0]     user_mm2s_rd_tdata;
+wire [7:0]      user_mm2s_rd_tkeep;
+wire            user_mm2s_rd_tlast;
+wire            user_mm2s_rd_tready;
+
+wire            user_s2mm_wr_cmd_tready;
+wire            user_s2mm_wr_cmd_tvalid;
+wire [71:0]     user_s2mm_wr_cmd_tdata;
+wire            user_s2mm_wr_tvalid;
+wire [63:0]     user_s2mm_wr_tdata;
+wire            user_s2mm_wr_tready;
+wire [7:0]      user_s2mm_wr_tkeep;
+wire            user_s2mm_wr_tlast;
+
+wire            user_s2mm_sts_tvalid;
+wire [7:0]      user_s2mm_sts_tdata;
+wire            user_s2mm_sts_tkeep;
+wire            user_s2mm_sts_tlast;
 
 system bd_system(
     .clk_300_o(),
@@ -285,170 +308,6 @@ vio_0 vio_0_cfg (
     
 );
 
-
-
-//system_wrapper system_wrapper_i();
-/*
-wire    ad9517_spi_wr_cmd;
-wire    ad9517_spi_rd_cmd;
-wire [MOSI_DATA_WIDTH-1:0] ad9517_spi_wr_data;
-wire [MISO_DATA_WIDTH:0]  ad9517_spi_rd_data;
-wire    ad9517_spi_busy;
-wire    ad9517_cfg_start;
-wire    ad9517_cfg_go;
-
-ad9517_cfg ad9517_cfg_i(
-    .clk(clk_20m),
-    .rst(~rstn),
-    .o_spi_wr_cmd(ad9517_spi_wr_cmd),
-    .o_spi_rd_cmd(ad9517_spi_rd_cmd),
-    .o_spi_wr_data(ad9517_spi_wr_data),
-    .i_spi_rd_data(ad9517_spi_rd_data),
-    .i_spi_busy(ad9517_spi_busy),
-    .i_cfg_start(ad9517_cfg_start)
-);
-
-assign ad9517_spi_rd_data = spi_rd_data;
-assign ad9517_spi_busy = spi_busy;
-
-wire    adc0_spi_wr_cmd;
-wire    adc0_spi_rd_cmd;
-wire [MOSI_DATA_WIDTH-1:0] adc0_spi_wr_data;
-wire [MISO_DATA_WIDTH:0]  adc0_spi_rd_data;
-wire    adc0_spi_busy;
-wire    adc0_cfg_start;
-wire    adc0_cfg_go;
-
-wire    adc1_spi_wr_cmd;
-wire    adc1_spi_rd_cmd;
-wire [MOSI_DATA_WIDTH-1:0] adc1_spi_wr_data;
-wire [MISO_DATA_WIDTH:0]  adc1_spi_rd_data;
-wire    adc1_spi_busy;
-wire    adc1_cfg_start;
-wire    adc1_cfg_go;
-
-adc_cfg adc0_cfg(
-    .clk(clk_20m),
-    .rst(~rstn),
-    .o_spi_wr_cmd(adc0_spi_wr_cmd),
-    .o_spi_rd_cmd(adc0_spi_rd_cmd),
-    .o_spi_wr_data(adc0_spi_wr_data),
-    .i_spi_rd_data(adc0_spi_rd_data),
-    .i_spi_busy(adc0_spi_busy),
-    .i_cfg_start(adc0_cfg_start),
-    .o_cfg_go(adc0_cfg_go)
-);
-
-adc_cfg adc1_cfg(
-    .clk(clk_20m),
-    .rst(~rstn),
-    .o_spi_wr_cmd(adc1_spi_wr_cmd),
-    .o_spi_rd_cmd(adc1_spi_rd_cmd),
-    .o_spi_wr_data(adc1_spi_wr_data),
-    .i_spi_rd_data(adc1_spi_rd_data),
-    .i_spi_busy(adc1_spi_busy),
-    .i_cfg_start(adc1_cfg_start),
-    .o_cfg_go(adc1_cfg_go)
-);
-
-assign adc0_spi_rd_data = spi_rd_data;
-assign adc0_spi_busy = spi_busy;
-assign adc1_spi_rd_data = spi_rd_data;
-assign adc1_spi_busy = spi_busy;
-
-always @(*) begin
-    if (adc0_cfg_go) begin
-        spi_wr_cmd = adc0_spi_wr_cmd;
-        spi_rd_cmd = adc0_spi_rd_cmd;
-        spi_wr_data = adc0_spi_wr_data;
-        adc0_cs_n = spi_cs_n;
-        ad9517_cs_n = 1'b1;
-        adc1_cs_n = 1'b1;
-    end
-    else if (adc1_cfg_go) begin
-        spi_wr_cmd = adc1_spi_wr_cmd;
-        spi_rd_cmd = adc1_spi_rd_cmd;
-        spi_wr_data = adc1_spi_wr_data;
-        adc1_cs_n = spi_cs_n;
-        ad9517_cs_n = 1'b1;
-        adc0_cs_n = 1'b1;
-    end
-    else begin
-        spi_wr_cmd = ad9517_spi_wr_cmd;
-        spi_rd_cmd = ad9517_spi_rd_cmd;
-        spi_wr_data = ad9517_spi_wr_data;
-        ad9517_cs_n = spi_cs_n;
-        adc0_cs_n = 1'b1;
-        adc1_cs_n = 1'b1;
-    end
-end
-
-
-always @(posedge clk_20m) begin
-    if (~rstn) begin
-        cnt <= 'h0;
-    end
-    else begin
-        cnt <= cnt + 1'd1;
-    end
-end
-
-assign spi_clk = cnt[5];
-
-spi_master #(
-      .CPOL( 0 ),
-      .FREE_RUNNING_SPI_CLK( 1 ),
-      .MOSI_DATA_WIDTH( MOSI_DATA_WIDTH),
-      .WRITE_MSB_FIRST( 1 ),
-      .MISO_DATA_WIDTH( MISO_DATA_WIDTH ),
-      .READ_MSB_FIRST( 1 ),
-      .INSTR_HEADER_LEN(INSTR_HEADER_LEN)
-    ) SM1 (
-      .clk(clk_20m),
-      .nrst(rstn  ),
-      .spi_clk(spi_clk),
-      .spi_wr_cmd(spi_wr_cmd ),
-      .spi_rd_cmd(spi_rd_cmd ),
-      .spi_busy(spi_busy),
-      .mosi_data(spi_wr_data),
-      .miso_data(spi_rd_data),
-      .clk_pin(spi_sclk),
-      .ncs_pin(spi_cs_n),
-      .mosi_pin(spi_mosi),
-      .oe_pin(spi_oe_n),
-      .miso_pin(spi_miso)
-    );
-
-assign spi_oe = ~spi_oe_n;
-
-IOBUF #(
-    .DRIVE(12), // Specify the output drive strength
-    .IBUF_LOW_PWR("TRUE"),  // Low Power - "TRUE", High Performance = "FALSE" 
-    .IOSTANDARD("DEFAULT"), // Specify the I/O standard
-    .SLEW("SLOW") // Specify the output slew rate
-   ) IOBUF_spi_mosi (
-    .O(spi_miso),     // Buffer output
-    .IO(spi_sdio),   // Buffer inout port (connect directly to top-level port)
-    .I(spi_mosi),     // Buffer input
-    .T(spi_oe)      // 3-state enable input, high=input, low=output
-   );
-
-ila_spi ila_spi_i (
-	.clk(spi_clk), // input wire clk
-	.probe0(spi_cs_n), // input wire [0:0]  probe0  
-	.probe1(spi_mosi), // input wire [0:0]  probe1 
-	.probe2(spi_oe), // input wire [0:0]  probe2 
-	.probe3(spi_miso), // input wire [0:0]  probe3 
-	.probe4(spi_sclk) // input wire [0:0]  probe4
-);
-
-vio_0 vio_0_cfg (
-  .clk(clk_20m),                // input wire clk
-  .probe_out0(ad9517_cfg_start),  // output wire [0 : 0] probe_out0
-  .probe_out1(adc0_cfg_start),  // output wire [0 : 0] probe_out1
-  .probe_out2(adc1_cfg_start)
-);
-*/
 // IIC 
 wire           iic_busy;
 wire [15:0]    ad5339_wr_data;
@@ -696,15 +555,15 @@ datamover datamover_hp0 (
     .m_axi_mm2s_rready(hp0_rready),                    // output wire m_axi_mm2s_rready
     // User interface
     
-    .s_axis_mm2s_cmd_tvalid(i_mm2s_rd_cmd_tvalid),          // input wire s_axis_mm2s_cmd_tvalid
-    .s_axis_mm2s_cmd_tready(o_mm2s_rd_cmd_tready),          // output wire s_axis_mm2s_cmd_tready
-    .s_axis_mm2s_cmd_tdata(i_mm2s_rd_cmd_tdata),            // input wire [71 : 0] s_axis_mm2s_cmd_tdata
+    .s_axis_mm2s_cmd_tvalid(user_mm2s_rd_cmd_tvalid),          // input wire s_axis_mm2s_cmd_tvalid
+    .s_axis_mm2s_cmd_tready(user_mm2s_rd_cmd_tready),          // output wire s_axis_mm2s_cmd_tready
+    .s_axis_mm2s_cmd_tdata(user_mm2s_rd_cmd_tdata),            // input wire [71 : 0] s_axis_mm2s_cmd_tdata
 
-    .m_axis_mm2s_tdata(o_mm2s_rd_tdata),                    // output wire [63 : 0] m_axis_mm2s_tdata
-    .m_axis_mm2s_tkeep(o_mm2s_rd_tkeep),                    // output wire [7 : 0] m_axis_mm2s_tkeep
-    .m_axis_mm2s_tlast(o_mm2s_rd_tlast),                    // output wire m_axis_mm2s_tlast
-    .m_axis_mm2s_tvalid(o_mm2s_rd_tvalid),                  // output wire m_axis_mm2s_tvalid
-    .m_axis_mm2s_tready(i_mm2s_rd_tready),                  // input wire m_axis_mm2s_tready
+    .m_axis_mm2s_tdata(user_mm2s_rd_tdata),                    // output wire [63 : 0] m_axis_mm2s_tdata
+    .m_axis_mm2s_tkeep(user_mm2s_rd_tkeep),                    // output wire [7 : 0] m_axis_mm2s_tkeep
+    .m_axis_mm2s_tlast(user_mm2s_rd_tlast),                    // output wire m_axis_mm2s_tlast
+    .m_axis_mm2s_tvalid(user_mm2s_rd_tvalid),                  // output wire m_axis_mm2s_tvalid
+    .m_axis_mm2s_tready(user_mm2s_rd_tready),                  // input wire m_axis_mm2s_tready
     // AXI4 interface
     .m_axi_s2mm_aclk(clk),                        // input wire m_axi_s2mm_aclk
     .m_axi_s2mm_aresetn(~rst),                  // input wire m_axi_s2mm_aresetn
@@ -712,11 +571,11 @@ datamover datamover_hp0 (
     .m_axis_s2mm_cmdsts_awclk(clk),      // input wire m_axis_s2mm_cmdsts_awclk
     .m_axis_s2mm_cmdsts_aresetn(~rst),  // input wire m_axis_s2mm_cmdsts_aresetn
    
-    .m_axis_s2mm_sts_tvalid(o_s2mm_sts_tvalid),          // output wire m_axis_s2mm_sts_tvalid
+    .m_axis_s2mm_sts_tvalid(user_s2mm_sts_tvalid),          // output wire m_axis_s2mm_sts_tvalid
     .m_axis_s2mm_sts_tready(1'b1),          // input wire m_axis_s2mm_sts_tready
-    .m_axis_s2mm_sts_tdata(o_s2mm_sts_tdata),            // output wire [7 : 0] m_axis_s2mm_sts_tdata
-    .m_axis_s2mm_sts_tkeep(o_s2mm_sts_tkeep),            // output wire [0 : 0] m_axis_s2mm_sts_tkeep
-    .m_axis_s2mm_sts_tlast(o_s2mm_sts_tlast),            // output wire m_axis_s2mm_sts_tlast
+    .m_axis_s2mm_sts_tdata(user_s2mm_sts_tdata),            // output wire [7 : 0] m_axis_s2mm_sts_tdata
+    .m_axis_s2mm_sts_tkeep(user_s2mm_sts_tkeep),            // output wire [0 : 0] m_axis_s2mm_sts_tkeep
+    .m_axis_s2mm_sts_tlast(user_s2mm_sts_tlast),            // output wire m_axis_s2mm_sts_tlast
     // AXI4 addr interface
    
     .m_axi_s2mm_awid(hp0_awid),                        // output wire [3 : 0] m_axi_s2mm_awid
@@ -740,15 +599,15 @@ datamover datamover_hp0 (
     .m_axi_s2mm_bvalid(hp0_bvalid),                    // input wire m_axi_s2mm_bvalid
     .m_axi_s2mm_bready(hp0_bready),                    // output wire m_axi_s2mm_bready
     // User interface
-    .s_axis_s2mm_cmd_tvalid(i_s2mm_wr_cmd_tvalid),          // input wire s_axis_s2mm_cmd_tvalid
-    .s_axis_s2mm_cmd_tready(o_s2mm_wr_cmd_tready),          // output wire s_axis_s2mm_cmd_tready
-    .s_axis_s2mm_cmd_tdata(i_s2mm_wr_cmd_tdata),            // input wire [71 : 0] s_axis_s2mm_cmd_tdata
+    .s_axis_s2mm_cmd_tvalid(user_s2mm_wr_cmd_tvalid),          // input wire s_axis_s2mm_cmd_tvalid
+    .s_axis_s2mm_cmd_tready(user_s2mm_wr_cmd_tready),          // output wire s_axis_s2mm_cmd_tready
+    .s_axis_s2mm_cmd_tdata(user_s2mm_wr_cmd_tdata),            // input wire [71 : 0] s_axis_s2mm_cmd_tdata
 
-    .s_axis_s2mm_tdata(i_s2mm_wr_tdata),                    // input wire [63 : 0] s_axis_s2mm_tdata
-    .s_axis_s2mm_tkeep(i_s2mm_wr_ttkeep),                    // input wire [7 : 0] s_axis_s2mm_tkeep
-    .s_axis_s2mm_tlast(),                    // input wire s_axis_s2mm_tlast
-    .s_axis_s2mm_tvalid(i_s2mm_wr_tvalid),                  // input wire s_axis_s2mm_tvalid
-    .s_axis_s2mm_tready(o_s2mm_wr_tready)                  // output wire s_axis_s2mm_tready
+    .s_axis_s2mm_tdata(user_s2mm_wr_tdata),                    // input wire [63 : 0] s_axis_s2mm_tdata
+    .s_axis_s2mm_tkeep(user_s2mm_wr_tkeep),                    // input wire [7 : 0] s_axis_s2mm_tkeep
+    .s_axis_s2mm_tlast(user_s2mm_wr_tlast),                    // input wire s_axis_s2mm_tlast
+    .s_axis_s2mm_tvalid(user_s2mm_wr_tvalid),                  // input wire s_axis_s2mm_tvalid
+    .s_axis_s2mm_tready(user_s2mm_wr_tready)                  // output wire s_axis_s2mm_tready
 );
 
 
