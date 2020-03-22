@@ -2,6 +2,7 @@
 
 module axi_data_gen #(
     parameter DATA_WIDTH = 32,
+    parameter LENGTH_WIDTH = 9,
     parameter STRB_WIDTH = DATA_WIDTH/8
 
 )(
@@ -9,7 +10,7 @@ module axi_data_gen #(
     input logic                     rst,
 
     input logic                     i_start,
-    input logic [9:0]               i_length,
+    input logic [LENGTH_WIDTH-1:0]  i_length,
     input logic                     i_ready,
     output logic [DATA_WIDTH-1:0]   o_data,
     output logic                    o_valid,
@@ -22,17 +23,17 @@ localparam WORD_WIDTH = STRB_WIDTH;
 localparam BIT_WIDTH = $clog2(STRB_WIDTH);
 
 logic [BIT_WIDTH-1:0]   last_bytes;
-logic [9-BIT_WIDTH:0]   word_num;
+logic [LENGTH_WIDTH-1-BIT_WIDTH:0]   word_num;
 
-logic [9:0]             cnt;
-logic                   cnt_ena;
-logic [DATA_WIDTH-1:0]  gen_data;
-logic                   gen_valid;
-logic                   gen_last;
-logic [STRB_WIDTH-1:0]  gen_keep;    
+logic [LENGTH_WIDTH-1:0]    cnt;
+logic                       cnt_ena;
+logic [DATA_WIDTH-1:0]      gen_data;
+logic                       gen_valid;
+logic                       gen_last;
+logic [STRB_WIDTH-1:0]      gen_keep;    
 
 always_comb begin
-    word_num = i_length[9:BIT_WIDTH] + |i_length[BIT_WIDTH-1:0];
+    word_num = i_length[LENGTH_WIDTH-1:BIT_WIDTH] + |i_length[BIT_WIDTH-1:0];
     last_bytes = i_length[BIT_WIDTH-1:0];
 end
 

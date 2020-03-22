@@ -6,10 +6,12 @@ module datamover_validation (
 
     input                   i_start,
     input [8:0]             i_length,
+    input [31:0]            i_start_addr,
+
 
     input                   i_s2mm_wr_cmd_tready,
     output logic [71:0]     o_s2mm_wr_cmd_tdata,
-    output loigc            o_s2mm_wr_cmd_tvalid,
+    output logic            o_s2mm_wr_cmd_tvalid,
 
     output logic [63:0]     o_s2mm_wr_tdata,
     output logic [7:0]      o_s2mm_wr_tkeep,
@@ -17,7 +19,7 @@ module datamover_validation (
     output logic            o_s2mm_wr_tlast,
     input  logic            i_s2mm_wr_tready,
 
-    input  logic [3:0]      s2mm_sts_tdata,
+    input  logic [7:0]      s2mm_sts_tdata,
     input  logic            s2mm_sts_tvalid,
     input  logic            s2mm_sts_tkeep,
     input  logic            s2mm_sts_tlast,
@@ -31,7 +33,7 @@ module datamover_validation (
     input [7:0]             i_mms2_rd_tkeep,
     input                   i_mm2s_rd_tvalid,
     input                   i_mm2s_rd_tlast,
-    output                  i_mm2s_rd_tready
+    output                  o_mm2s_rd_tready
 );
 
 localparam   WR_EOF_VAL = 4'b1010;
@@ -50,9 +52,16 @@ logic           gen_valid;
 logic           gen_last;
 logic [7:0]     gen_keep;
 
+assign o_mm2s_rd_tready = 1;
+
 always_ff @(posedge clk) begin
     start_r <= i_start;
     start_p <= ~start_r & i_start;
+end
+
+always_comb begin
+    s2mm_wr_saddr = i_start_addr;
+    s2mm_wr_length = i_length;
 end
 
 enum logic [2:0] {
@@ -81,22 +90,22 @@ always_comb begin
             end     
         end
         WR_CMD_s: begin
-            if (i_s2mm_wr_tready) begin
+            if (i_s2mm_wr_cmd_tready) begin
                 ns = WR_DATA_s;
             end
         end
         WR_DATA_s: begin
             if (gen_last & gen_valid) begin
-                ns = IDLE_s;
+                ns = WR_DONE_s;
             end
         end
         WR_DONE_s: begin
-            if (s2mm_sts_tdata == WR_EOF_VAL & s2mm_sts_tvalid & s2mm_sts_tlast) begin
+            if (s2mm_sts_tdata[3:0] == WR_EOF_VAL & s2mm_sts_tvalid & s2mm_sts_tlast) begin
                 ns = RD_CMD_s;
             end
         end
         RD_CMD_s: begin
-            if (i_mm2s_rd_tready) begin
+            if (i_mm2s_rd_cmd_tready) begin
                 ns = RD_DATA_s;
             end
         end
@@ -113,6 +122,8 @@ end
 always_comb begin
     o_s2mm_wr_cmd_tvalid = 0;
     o_mm2s_rd_cmd_tvalid = 0;
+    o_mm2s_rd_cmd_tdata = 0;
+    o_s2mm_wr_cmd_tdata = 0;
     wr_start = 0;
     case(cs)
         IDLE_s,WR_DATA_s, WR_DONE_s, RD_DATA_s: begin
@@ -123,7 +134,7 @@ always_comb begin
         WR_CMD_s: begin
             wr_start = 1;
             o_s2mm_wr_cmd_tvalid = 1;
-            o_s2mm_wr_cmd_tdata = {4'd0, s2mm_wr_eof, s2mm_wr_saddr, 1'b0, 8'd1, 14'd0, s2mm_wr_length};
+            o_s2mm_wr_cmd_tdata = {4'd0, WR_EOF_VAL, s2mm_wr_saddr, 1'b0, 8'd1, 14'd0, s2mm_wr_length};
         end
         RD_CMD_s: begin
             o_mm2s_rd_cmd_tvalid = 1;
@@ -144,7 +155,8 @@ always_comb begin
 end
 
 axi_data_gen # (
-    .DATA_WIDTH(64)
+    .DATA_WIDTH(64),
+    .LENGTH_WIDTH(9)
 )axi_data_gen_inst (
     .clk(clk),
     .rst(rst),

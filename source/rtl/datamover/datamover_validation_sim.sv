@@ -31,15 +31,26 @@ logic           hp0_bvalid;
 logic           hp0_bready;
 
 wire            hp0_arready;
-wire            hp0_awready;
 wire [5:0]      hp0_bid;
 
 wire [63:0]     hp0_rdata;
-wire [5:0]      hp0_rid;
+wire [3:0]      hp0_rid;
 wire            hp0_rlast;
 wire [1:0]      hp0_rresp;
 wire            hp0_rvalid;
 wire            hp0_rready;
+
+wire [31:0]     hp0_araddr;
+wire [1:0]      hp0_arburst;
+wire [3:0]      hp0_arcache;
+wire [3:0]      hp0_arid;
+wire [7:0]      hp0_arlen;
+wire [1:0]      hp0_arlock;
+wire [2:0]      hp0_arprot;
+wire [3:0]      hp0_arqos;
+wire [2:0]      hp0_arsize;
+wire            hp0_arvalid;
+
 
 wire            user_mm2s_rd_cmd_tvalid;
 wire            user_mm2s_rd_cmd_tready;
@@ -48,6 +59,8 @@ wire [63:0]     user_mm2s_rd_tdata;
 wire [7:0]      user_mm2s_rd_tkeep;
 wire            user_mm2s_rd_tlast;
 wire            user_mm2s_rd_tready;
+wire            user_mm2s_rd_tvalid;
+
 
 wire            user_s2mm_wr_cmd_tready;
 wire            user_s2mm_wr_cmd_tvalid;
@@ -72,6 +85,10 @@ logic           wr_data_finish;
 
 logic [31:0]    start_addr;
 
+logic           start;
+logic [8:0]     length;
+
+
 initial begin
     clk = 0;
     forever begin
@@ -85,9 +102,47 @@ initial begin
     rst = 0;
 end
 
+initial begin
+    start <= 0;
+    length <= 0;
+    start_addr <= 0;
+    #200;
+    @(posedge clk);
+    start <= 1;
+    length <= 255;
+    @(posedge clk);
+    start <= 0;
+
+    wait(user_mm2s_rd_tlast & user_mm2s_rd_tvalid);
+    #100;
+
+    @(posedge clk);
+    start <= 1;
+    length <= 254;
+    @(posedge clk);
+    start <= 0;
+
+    wait(user_mm2s_rd_tlast & user_mm2s_rd_tvalid);
+    #100;
+
+    @(posedge clk);
+    start <= 1;
+    length <= 3;
+    @(posedge clk);
+    start <= 0;
+
+    #2000;
+    $stop;
+
+ end
+
 datamover_validation  datamover_validation_inst(
     .clk(clk),
     .rst(rst),
+
+    .i_start(start),
+    .i_length(length),
+    .i_start_addr(start_addr),
 
     .i_s2mm_wr_cmd_tready(user_s2mm_wr_cmd_tready),
     .o_s2mm_wr_cmd_tdata(user_s2mm_wr_cmd_tdata),
@@ -113,7 +168,7 @@ datamover_validation  datamover_validation_inst(
     .i_mms2_rd_tkeep(user_mm2s_rd_tkeep),
     .i_mm2s_rd_tvalid(user_mm2s_rd_tvalid),
     .i_mm2s_rd_tlast(user_mm2s_rd_tlast),
-    .i_mm2s_rd_tready(user_mm2s_rd_tready)
+    .o_mm2s_rd_tready(user_mm2s_rd_tready)
 );
 
 
@@ -215,7 +270,7 @@ axi_ram #(
     // Width of address bus in bits
     .ADDR_WIDTH(16),
     // Width of ID signal
-    .ID_WIDTH(8),
+    .ID_WIDTH(4),
     // Extra pipeline register on output
     .PIPELINE_OUTPUT(0)
 ) axi_ram_inst (
@@ -239,7 +294,7 @@ axi_ram #(
     .s_axi_wvalid(hp0_wvalid),
     .s_axi_wready(hp0_wready),
 
-    .s_axi_bid(),
+    .s_axi_bid(hp0_bid),
     .s_axi_bresp(hp0_bresp),
     .s_axi_bvalid(hp0_bvalid),
     .s_axi_bready(hp0_bready),
