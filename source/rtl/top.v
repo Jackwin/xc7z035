@@ -422,7 +422,8 @@ clock_gen #(
     .CLKBOUT_MULT_F(5.0),
     .DIVCLK_DIVIDE(1),
     .CLK0_DIVIDE(8.0),
-    .CLK1_DIVIDE(2)
+    .CLK1_DIVIDE(2),
+    .CLK2_DIVIDE(4)
 ) clock_gen_inst (
     .ref_clk(sys_clk_200m),
     .rst(rst),
@@ -430,8 +431,7 @@ clock_gen #(
     .locked_o(sys_clk_locked),
     .clk0_o(clk_125m),
     .clk1_o(clk_500m),
-    .clk2_o(clk_250m),
-
+    .clk2_o(clk_250m)
 );
 
 vio_sys vio_sys_i (
@@ -615,9 +615,9 @@ datamover datamover_hp0 (
     .s_axis_s2mm_tready(user_s2mm_wr_tready)                  // output wire s_axis_s2mm_tready
 );
 
-logic           dm_start;
-logic [8:0]     dm_length;
-logic [31:0]    dm_start_addr;
+wire           dm_start;
+wire [8:0]     dm_length;
+wire [31:0]    dm_start_addr;
 
 vio_datamover vio_datamover_inst (
   .clk(clk_300),                // input wire clk
@@ -666,25 +666,24 @@ datamover_validation  datamover_validation_inst(
 ila_datamover ila_datamover_inst (
 	.clk(clk_300), // input wire clk
 
-
 	.probe0(user_s2mm_wr_cmd_tready), // input wire [0:0]  probe0  
 	.probe1(user_s2mm_wr_cmd_tdata), // input wire [71:0]  probe1 
 	.probe2(user_s2mm_wr_cmd_tvalid), // input wire [0:0]  probe2 
-	.probe3(probe3), // input wire [63:0]  probe3 
-	.probe4(probe4), // input wire [7:0]  probe4 
-	.probe5(probe5), // input wire [0:0]  probe5 
-	.probe6(probe6), // input wire [0:0]  probe6 
-	.probe7(probe7), // input wire [0:0]  probe7 
-	.probe8(probe8), // input wire [0:0]  probe8 
-	.probe9(probe9), // input wire [3:0]  probe9 
-	.probe10(probe10), // input wire [0:0]  probe10 
-	.probe11(probe11), // input wire [63:0]  probe11 
-	.probe12(probe12), // input wire [7:0]  probe12 
-	.probe13(probe13), // input wire [0:0]  probe13 
-	.probe14(probe14), // input wire [0:0]  probe14 
-	.probe15(probe15), // input wire [0:0]  probe15 
-	.probe16(probe16), // input wire [71:0]  probe16 
-	.probe17(probe17) // input wire [0:0]  probe17
+	.probe3(user_s2mm_wr_tdata), // input wire [63:0]  probe3 
+	.probe4(user_s2mm_wr_tkeep), // input wire [7:0]  probe4 
+	.probe5(user_s2mm_wr_tlast), // input wire [0:0]  probe5 
+	.probe6(user_s2mm_wr_tvalid), // input wire [0:0]  probe6 
+	.probe7(user_s2mm_wr_tready), // input wire [0:0]  probe7 
+	.probe8(user_s2mm_sts_tvalid), // input wire [0:0]  probe8 
+	.probe9(user_s2mm_sts_tdata), // input wire [3:0]  probe9 
+	.probe10(user_s2mm_sts_tlast), // input wire [0:0]  probe10 
+	.probe11(user_mm2s_rd_tdata), // input wire [63:0]  probe11 
+	.probe12(user_mm2s_rd_tkeep), // input wire [7:0]  probe12 
+	.probe13(user_mm2s_rd_tlast), // input wire [0:0]  probe13 
+	.probe14(user_mm2s_rd_tvalid), // input wire [0:0]  probe14 
+	.probe15(user_mm2s_rd_cmd_tvalid), // input wire [0:0]  probe15 
+	.probe16(user_mm2s_rd_cmd_tdata), // input wire [71:0]  probe16 
+	.probe17(user_mm2s_rd_cmd_tready) // input wire [0:0]  probe17
 );
 
 
