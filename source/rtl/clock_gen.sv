@@ -4,7 +4,8 @@ module clock_gen #(
     parameter   CLKBOUT_MULT_F = 4,
     parameter   DIVCLK_DIVIDE = 1,
     parameter   CLK0_DIVIDE = 4,
-    parameter   CLK1_DIVIDE = 1
+    parameter   CLK1_DIVIDE = 1,
+    parameter   CLK2_DIVIDE = 2
 
     )(
     input       ref_clk,
@@ -12,7 +13,8 @@ module clock_gen #(
 
     output      locked_o,
     output      clk0_o,
-    output      clk1_o
+    output      clk1_o,
+    output      clk2_o
 
 );
 
@@ -22,6 +24,8 @@ logic       clk0;
 logic       clk0_buf;
 logic       clk1;
 logic       clk1_buf;
+logic       clk2;
+logic       clk2_buf;
 
 
 MMCME2_BASE #(
@@ -31,7 +35,7 @@ MMCME2_BASE #(
     .CLKIN1_PERIOD(REF_CLK_PERIOD),       // Input clock period in ns to ps resolution (i.e. 33.333 is 30 MHz).
     // CLKOUT0_DIVIDE - CLKOUT6_DIVIDE: Divide amount for each CLKOUT (1-128)
     .CLKOUT1_DIVIDE(CLK1_DIVIDE),
-    .CLKOUT2_DIVIDE(1),
+    .CLKOUT2_DIVIDE(CLK2_DIVIDE),
     .CLKOUT3_DIVIDE(1),
     .CLKOUT4_DIVIDE(1),
     .CLKOUT5_DIVIDE(1),
@@ -64,7 +68,7 @@ MMCME2_BASE_inst (
     .CLKOUT0B(),   // 1-bit output: Inverted CLKOUT0
     .CLKOUT1(clk1),     // 1-bit output: CLKOUT1
     .CLKOUT1B(),   // 1-bit output: Inverted CLKOUT1
-    .CLKOUT2(),     // 1-bit output: CLKOUT2
+    .CLKOUT2(clk2),     // 1-bit output: CLKOUT2
     .CLKOUT2B(),   // 1-bit output: Inverted CLKOUT2
     .CLKOUT3(),     // 1-bit output: CLKOUT3
     .CLKOUT3B(),   // 1-bit output: Inverted CLKOUT3
@@ -117,5 +121,11 @@ BUFR_clk1 (
 
 assign clk1_o = clk1_buf;
 
+BUFG BUFG_clk2 (
+      .O(clk2_buf), // 1-bit output: Clock output
+      .I(clk2)  // 1-bit input: Clock input
+   );
+
+assign clk2_o = clk2_buf;
 
 endmodule
