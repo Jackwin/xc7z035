@@ -187,6 +187,7 @@ wire [2:0]      hp0_awprot;
 wire [3:0]      hp0_awqos;
 wire [2:0]      hp0_awsize;
 wire            hp0_awvalid;
+wire [3:0]      hp0_awuser;
 
 wire [63:0]     hp0_wdata;
 wire [5:0]      hp0_wid;
@@ -220,6 +221,13 @@ wire            user_s2mm_sts_tlast;
 wire            clk_300;
 wire            rst_300;
 
+wire [15:0]    gap_us;
+wire [10:0]    pulse_num;
+wire [10:0]    pulse_width;
+wire           pulse_gen_start;
+wire           pulse_gen_trig;
+wire           pulse_gen_done;
+
 system bd_system(
     .clk_300_o(clk_300),
     .reset_300_o(rst_300),
@@ -227,7 +235,7 @@ system bd_system(
     .hp0_araddr(hp0_araddr),
     .hp0_arburst(hp0_arburst),
     .hp0_arcache(hp0_arcache),
-    .hp0_arid(hp0_arid),
+   // .hp0_arid(hp0_arid),
     .hp0_arlen(hp0_arlen),
     .hp0_arlock(hp0_arlock),
     .hp0_arprot(hp0_arprot),
@@ -239,7 +247,7 @@ system bd_system(
     .hp0_awaddr(hp0_awaddr),
     .hp0_awburst(hp0_awburst),
     .hp0_awcache(hp0_awcache),
-    .hp0_awid(hp0_awid),
+  //  .hp0_awid(hp0_awid),
     .hp0_awlen(hp0_awlen),
     .hp0_awlock(hp0_awlock),
     .hp0_awprot(hp0_awprot),
@@ -248,22 +256,22 @@ system bd_system(
     .hp0_awsize(hp0_awsize),
     .hp0_awvalid(hp0_awvalid),
 
-    .hp0_bid(hp0_bid),
+  //  .hp0_bid(hp0_bid),
     .hp0_bready(hp0_bready),
     .hp0_bresp(hp0_bresp),
     .hp0_bvalid(hp0_bvalid),
     //AXI4 read data interface
     .hp0_rdata(hp0_rdata),
-    .hp0_rid(hp0_rid),
+  //  .hp0_rid(hp0_rid),
     .hp0_rlast(hp0_rlast),
     .hp0_rready(hp0_rready),
     .hp0_rresp(hp0_rresp),
-    .hp0_rvalid(hp0_bvalid),
+    .hp0_rvalid(hp0_rvalid),
     //AXI4 write data interface
     .hp0_wdata(hp0_wdata),
-    .hp0_wid(hp0_wid),
+  //  .hp0_wid(hp0_wid),
     .hp0_wlast(hp0_wlast),
-    .hp0_wready(hp0_ready),
+    .hp0_wready(hp0_wready),
     .hp0_wstrb(hp0_wstrb),
     .hp0_wvalid(hp0_wvalid),
     //ADC BRAM
@@ -491,12 +499,7 @@ ad9434_data ad9434_data_1(
    );
 
 // ------------------------ pulse generator --------------------
-wire [15:0]    gap_us;
-wire [10:0]    pulse_num;
-wire [10:0]    pulse_width;
-wire           pulse_gen_start;
-wire           pulse_gen_trig;
-wire           pulse_gen_done;
+
 
 pulse_gen pulse_gen_inst (
     .clk(clk_500m),

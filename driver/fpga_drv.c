@@ -1,7 +1,16 @@
 
 //platform 对应device的驱动
 struct fpga_dev {
-    ...
+    struct module *owner;
+
+    unsigned int major;
+    unsigned int minor;
+    struct class* fpga_class;
+
+    struct cdev cdev;
+    struct device* device;
+
+    struct platform_device *platform_dev;
 };
 
 // platform_drvier和platform_device匹配时会调用此函数
@@ -21,9 +30,9 @@ static int fpga_dev_remove(struct platform_device *pdev)
     ...
 }
 
-static struct platform_driver xxx_driver = {
+static struct platform_driver fpga_driver = {
     .driver = {
-        .name = "xxx",              // device_driver中只定义了名字
+        .name = "fpgadrv",              // device_driver中只定义了名字
         .owner = THIS_MODULE,
     },
     .probe = fpga_dev_probe,
