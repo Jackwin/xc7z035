@@ -5,7 +5,7 @@ module device_cfg # (
     parameter MISO_DATA_WIDTH = 8,
     parameter INSTR_HEADER_LEN = 16
     )(
-    input logic     clk_20m,
+    input logic     clk_20,
     input logic     rst,
     input logic     soft_rst,
 
@@ -59,12 +59,12 @@ logic    ad9517_spi_busy;
 //logic    ad9517_cfg_start;
 logic    ad9517_cfg_go;
 
-always_ff @(posedge clk_20m) begin
+always_ff @(posedge clk_20) begin
     cfg_start_r <= i_cfg_start;
     cfg_start <= ~cfg_start_r & i_cfg_start;
 end
 
-always_ff @(posedge clk_20m) begin
+always_ff @(posedge clk_20) begin
     if (rst | soft_rst) begin
         cs <= IDLE;
     end
@@ -132,7 +132,7 @@ always_comb begin
 end
 
 ila_device_cfg ila_device_cfg_inst (
-	.clk(clk_20m), // input wire clk
+	.clk(clk_20), // input wire clk
 	.probe0(cs), // input wire [1:0]  probe0  
 	.probe1(ad9517_cfg_start), // input wire [0:0]  probe1 
 	.probe2(adc0_cfg_start), // input wire [0:0]  probe2 
@@ -142,7 +142,7 @@ ila_device_cfg ila_device_cfg_inst (
 // ------------------------------------------------------------------------
 
 ad9517_cfg ad9517_cfg_i(
-    .clk(clk_20m),
+    .clk(clk_20),
     .rst(rst),
     .o_spi_wr_cmd(ad9517_spi_wr_cmd),
     .o_spi_rd_cmd(ad9517_spi_rd_cmd),
@@ -172,7 +172,7 @@ logic    adc1_spi_busy;
 logic    adc1_cfg_go;
 
 adc_cfg adc0_cfg(
-    .clk(clk_20m),
+    .clk(clk_20),
     .rst(rst),
     .o_spi_wr_cmd(adc0_spi_wr_cmd),
     .o_spi_rd_cmd(adc0_spi_rd_cmd),
@@ -185,7 +185,7 @@ adc_cfg adc0_cfg(
 );
 
 adc_cfg adc1_cfg(
-    .clk(clk_20m),
+    .clk(clk_20),
     .rst(rst),
     .o_spi_wr_cmd(adc1_spi_wr_cmd),
     .o_spi_rd_cmd(adc1_spi_rd_cmd),
@@ -230,7 +230,7 @@ always @(*) begin
 end
 
 
-always @(posedge clk_20m) begin
+always @(posedge clk_20) begin
     if (rst) begin
         cnt <= 'h0;
     end
@@ -250,7 +250,7 @@ spi_master #(
       .READ_MSB_FIRST( 1 ),
       .INSTR_HEADER_LEN(INSTR_HEADER_LEN)
     ) SM1 (
-      .clk(clk_20m),
+      .clk(clk_20),
       .nrst(~rst  ),
       .spi_clk(spi_clk),
       .spi_wr_cmd(spi_wr_cmd ),

@@ -79,11 +79,13 @@ wire        mdio_i;
 wire        mdio_o;
 wire        locked;
 wire        clk_200m;
-wire        clk_20m;
+wire        clk_20;
 wire        clk_800m;
-wire    sys_clk_100m;
-wire    sys_clk_locked;
-wire    sys_clk_200m;
+wire        clk_300;
+wire        clk_100;
+wire        sys_clk_100m;
+wire        sys_clk_locked;
+wire        sys_clk_200m;
 /*
 wire        spi_mosi;
 wire        spi_miso;
@@ -139,8 +141,10 @@ assign c_pl_led141 = 1'b0;
 assign rst = ~rstn;
 
 clk_wiz_sys clk_wiz_sys_i (
-    .clk_200m(clk_200m),
-    .clk_20m(clk_20m),
+    .clk_200(clk_200m),
+    .clk_20(clk_20),
+    .clk_300(clk_300),
+    .clk_100(clk_100),
     .resetn(rstn), 
     .locked(locked),
     .clk50m_in(clk50m_in)
@@ -218,7 +222,6 @@ wire [7:0]      user_s2mm_sts_tdata;
 wire            user_s2mm_sts_tkeep;
 wire            user_s2mm_sts_tlast;
 
-wire            clk_300;
 wire            rst_300;
 
 wire [15:0]    gap_us;
@@ -229,8 +232,9 @@ wire           pulse_gen_trig;
 wire           pulse_gen_done;
 
 system bd_system(
-    .clk_300_o(clk_300),
-    .reset_300_o(rst_300),
+    .i_clk_300(clk_300),
+    .i_clk_100(clk_100),
+    .o_rst_300(rst_300),
     //AXI4 read addr
     .hp0_araddr(hp0_araddr),
     .hp0_arburst(hp0_arburst),
@@ -286,7 +290,7 @@ system bd_system(
 );
 
 /*
-always @(posedge clk_20m) begin
+always @(posedge clk_20) begin
     cfg_start_r <= cfg_start_vio;
     cfg_start <= ~cfg_start_vio & cfg_start_r;
 end
@@ -297,7 +301,7 @@ device_cfg #(
     .INSTR_HEADER_LEN(INSTR_HEADER_LEN)
 
 )device_cfg_inst (
-    .clk_20m(clk_20m),
+    .clk_20m(clk_20),
     .rst(rst),
     .soft_rst(soft_rst),
 
@@ -312,7 +316,7 @@ device_cfg #(
 );
 
 vio_0 vio_0_cfg (
-    .clk(clk_20m),                // input wire clk
+    .clk(clk_20),                // input wire clk
     .probe_in0(device_cfg_done),
     .probe_out0(device_cfg_start),  // output wire [0 : 0] probe_out0
     .probe_out1(soft_rst) // output wire [0 : 0] probe_out1
@@ -334,7 +338,7 @@ wire           ad5339_rd_done;
 
 // ------------------------------------------- AD5339 ------------------------------------
 ad5339_cfg ad5339_cfg_i (
-    .sys_clk(clk_20m),
+    .sys_clk(clk_20),
     .sys_rst(rst),
     .device_addr(AD5339_DEVICE_ADDR),
     .iic_wr_data(ad5339_wr_data),
@@ -354,7 +358,7 @@ ad5339_cfg ad5339_cfg_i (
 );
 /*
 ila_ad5339 ila_ad5339_i (
-	.clk(clk_20m), // input wire clk
+	.clk(clk_20), // input wire clk
 	.probe0(ad5339_wr_data), // input wire [15:0]  probe0  
 	.probe1(ad5339_rd_data), // input wire [15:0]  probe1 
 	.probe2(ad5339_wr_req), // input wire [0:0]  probe2 
@@ -367,7 +371,7 @@ ila_ad5339 ila_ad5339_i (
 );
 */
 vio_ad5339 vio_ad5339_i (
-  .clk(clk_20m),                // input wire clk
+  .clk(clk_20),                // input wire clk
   .probe_out0(ad5339_wr_req),  // output wire [0 : 0] probe_out0
   .probe_out1(ad5339_rd_req),  // output wire [0 : 0] probe_out1
   .probe_out2(ad5339_wr_data)  // output wire [15 : 0] probe_out2
@@ -376,7 +380,7 @@ vio_ad5339 vio_ad5339_i (
 // -------------------------------------- trig ----------------------------------------
 
 trig trig_i (
-    .sys_clk(clk_20m),
+    .sys_clk(clk_20),
     .sys_rst(rst),
     .trig_in(trig_in),
     .trig_d_o(trig_d),
@@ -490,7 +494,7 @@ ad9434_data ad9434_data_1(
       .SRTYPE("SYNC") // Set/Reset type: "SYNC" or "ASYNC" 
    ) ODDR_HP_CLK (
       .Q(hp_clk),   // 1-bit DDR output
-      .C(clk_20m),   // 1-bit clock input
+      .C(clk_20),   // 1-bit clock input
       .CE(1'b1), // 1-bit clock enable input
       .D1(1'b1), // 1-bit data input (positive edge)
       .D2(1'b0), // 1-bit data input (negative edge)

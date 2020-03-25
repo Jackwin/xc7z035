@@ -16,7 +16,7 @@ struct fpga_dev {
 // platform_drvier和platform_device匹配时会调用此函数
 static int fpga_dev_probe(struct platform_device *pdev)
 {
-    struct xxx_dev *my_dev;
+    struct fpga_dev *my_dev;
     // devm_xxx的函数会自动回收内存
     my_dev = devm_kzalloc(&pdev->dev, sizeof(*gl), GFP_KERNEL);
     ...
