@@ -138,7 +138,7 @@ always_comb begin
         end
         RD_CMD_s: begin
             o_mm2s_rd_cmd_tvalid = 1;
-            o_mm2s_rd_cmd_tdata = {4'd0, 4'h0, s2mm_wr_saddr, 1'b0, 8'd1, 14'd0, s2mm_wr_length};
+            o_mm2s_rd_cmd_tdata = {8'd0, s2mm_wr_saddr, 1'b0, 1'b1, 7'd1, 14'd0, s2mm_wr_length};
         end
         default: begin
             o_s2mm_wr_cmd_tvalid = 0;

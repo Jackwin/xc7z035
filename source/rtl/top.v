@@ -149,12 +149,12 @@ clk_wiz_sys clk_wiz_sys_i (
     .locked(locked),
     .clk50m_in(clk50m_in)
 ); 
-
+/*
 vio_sys vio_sys_inst (
     .clk(clk50m_in),
     .probe_in0(locked)
 );
-
+*/
 //---------------------------------------------------
 // data mover signals
 // --------------------------------------------------
@@ -235,6 +235,7 @@ system bd_system(
     .i_clk_300(clk_300),
     .i_clk_100(clk_100),
     .o_rst_300(rst_300),
+    .i_locked(locked),
     //AXI4 read addr
     .hp0_araddr(hp0_araddr),
     .hp0_arburst(hp0_arburst),
@@ -301,7 +302,7 @@ device_cfg #(
     .INSTR_HEADER_LEN(INSTR_HEADER_LEN)
 
 )device_cfg_inst (
-    .clk_20m(clk_20),
+    .clk_20(clk_20),
     .rst(rst),
     .soft_rst(soft_rst),
 
