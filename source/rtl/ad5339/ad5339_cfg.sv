@@ -104,10 +104,10 @@ logic           sda_pad_o;
 logic           sda_padoen_o;
 
 logic [4:0]     cs, ns;
-logic           wr_slave_flag;
+//logic           wr_slave_flag;
 logic           wr_cmd_flag;
-logic           wr_addr_flag;
-logic           wr_data_flag;
+//logic           wr_addr_flag;
+//logic           wr_data_flag;
 logic           rd_slave_flag;
 logic           rd_cmd_flag;
 logic           rd_addr_flag;
@@ -341,9 +341,9 @@ end
 
 always_ff @(posedge sys_clk) begin
     if (sys_rst) begin
-        wr_slave_flag <= 0;
-        wr_addr_flag <= 0;
-        wr_data_flag <= 0;
+       // wr_slave_flag <= 0;
+       // wr_addr_flag <= 0;
+      //  wr_data_flag <= 0;
         rd_cmd_flag <= 0;
         rd_data_flag <= 0;
         rd_addr_flag <= 0;
@@ -357,10 +357,10 @@ always_ff @(posedge sys_clk) begin
     else begin
         case(cs)
             IDLE_s: begin
-                wr_slave_flag <= 0;
+               // wr_slave_flag <= 0;
                 wr_cmd_flag <= 0;
-                wr_addr_flag <= 0;
-                wr_data_flag <= 0;
+               // wr_addr_flag <= 0;
+               // wr_data_flag <= 0;
                 rd_cmd_flag <= 0;
                 rd_data_flag <= 0;
                 rd_addr_flag <= 0;

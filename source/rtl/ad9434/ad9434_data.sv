@@ -1,10 +1,14 @@
 
 `timescale 1ns/1ps
-module ad9434_data (
+module ad9434_data #(
+    parameter WR_EOF_VAL = 4'b1010
+    ) (
     input           clk_200m,
     input           rst,
     input           i_trig,
     input [9:0]     i_us_capture,
+
+    output          o_cap_done,
 
     input [5:0]     i_adc0_din_p,
     input [5:0]     i_adc0_din_n,
@@ -12,13 +16,31 @@ module ad9434_data (
     input           i_adc0_or_n,
     input           i_adc0_dco_p,
     input           i_adc0_dco_n,
-    
+    /*
     output logic    o_bram_clk,
     output logic    o_bram_rst,
     output logic [31:0] o_bram_addr,
     output logic [31:0] o_bram_data,
     output logic    o_bram_ena,
-    output logic    o_bram_wea
+    output logic    o_bram_wea,
+    */
+    // datamover interface
+    input                   dm_clk,
+    input                   dm_rst,
+    input                   i_s2mm_wr_cmd_tready,
+    output logic [71:0]     o_s2mm_wr_cmd_tdata,
+    output logic            o_s2mm_wr_cmd_tvalid,
+
+    output logic [63:0]     o_s2mm_wr_tdata,
+    output logic [7:0]      o_s2mm_wr_tkeep,
+    output logic            o_s2mm_wr_tvalid,
+    output logic            o_s2mm_wr_tlast,
+    input  logic            i_s2mm_wr_tready,
+
+    input  logic [7:0]      s2mm_sts_tdata,
+    input  logic            s2mm_sts_tvalid,
+    input  logic            s2mm_sts_tkeep,
+    input  logic            s2mm_sts_tlast
 
 );
 
@@ -30,12 +52,12 @@ logic [5:0]     adc_data_q1;
 logic [5:0]     adc_data_q2;
 logic           adc_or;
 logic [5:0]     data_idelay;
-
+/*
 logic [31:0]    ram_addr;
 logic [31:0]    ram_data;
 logic           ram_ena;
 logic           ram_wea;
-
+*/
 
 /*                _ _ _         _ _ _
                  /     \       /     \
@@ -278,9 +300,16 @@ end
 enum logic [3:0] {
     IDLE = 4'b001,
     CAPTURE = 4'b010,
-    STORE = 4'b100,
+    DONE = 4'b100,
     END = 4'b1000
 } cs, ns;
+
+enum logic [1:0] {
+    DM_IDLE_s = 2'd0,
+    DM_CMD_s = 2'd1,
+    DM_DATA_s = 2'd2,
+    DM_WAIT_s = 2'd3
+} dm_cs, dm_ns;
 logic [11:0]    adc_data;
 logic [7:0]     cnt;
 logic [9:0]     us_cnt;
@@ -290,8 +319,17 @@ logic           cap_done;
 logic           trig;
 logic           i_trig_r;
 
-logic           store_ena_sync;
-logic           store_done_sync;
+logic           fifo_wr_ena;
+logic [15:0]    fifo_din;
+logic           fifo_full;
+logic [6:0]     fifo_wr_cnt;
+
+logic           fifo_rd_ena;
+logic           fifo_empty;
+logic [63:0]    fifo_dout;
+logic [4:0]     fifo_rd_cnt;
+logic [4:0]     fifo_rd_cnt_next;
+
 
 
 // clock domain crossing
@@ -320,11 +358,11 @@ always_comb begin
         end
         CAPTURE: begin
             if (us_cnt == i_us_capture) begin
-                ns = STORE;
+                ns = DONE;
             end
         end
-        STORE: begin
-            if (store_done) ns = END;
+        DONE: begin
+            ns = END;
         end
         END: begin
             ns = IDLE;
@@ -339,6 +377,7 @@ always_ff @(posedge clk_200m) begin
         us_cnt <= 0;
         cap_done <= 0;
         store_ena <= 0;
+      //  fifo_wr_cnt <= 0;
     end
     else begin
         case(cs)
@@ -347,6 +386,7 @@ always_ff @(posedge clk_200m) begin
                 us_cnt <= 0;
                 cap_done <= 0;
                 store_ena <= 0;
+              //  fifo_wr_cnt <= 0;
             end
             CAPTURE: begin
                 if (cnt == 8'd199) begin  // 1us
@@ -356,11 +396,11 @@ always_ff @(posedge clk_200m) begin
                 else begin
                     cnt <= cnt + 1;
                 end
+
+                //fifo_wr_cnt <= fifo_wr_cnt + 1;
+
             end
-            STORE: begin
-                store_ena <= 1;
-            end
-            END: begin
+            DONE: begin
                 cap_done <= 1;
             end
             default: begin
@@ -373,43 +413,180 @@ always_ff @(posedge clk_200m) begin
     end
 end
 
+assign o_cap_done = cap_done;
+
+// When fifo stores 256B data, assert the fifo_256b_done
+logic fifo_256b_done;
+logic fifo_256b_done_r1;
+logic fifo_256b_done_r2;
+logic fifo_256b_done_cdc;
+logic fifo_256b_done_sync;
+logic fifo_256b_done_dm;
 always_comb begin
     adc_data = {adc_data1, adc_data2};
-    o_bram_clk = adc_clk;
-    o_bram_rst = rst;
-    o_bram_addr = ram_addr;
-    o_bram_data = ram_data;
-    o_bram_ena = ram_ena;
-    o_bram_wea = ram_wea;
-
-    ram_ena = store_ena_sync;
-    ram_wea = store_ena_sync;
-    
-end
-
-
-always_ff @(posedge adc_clk) begin
-    store_ena_sync <= store_ena;
-    store_done_sync <= store_done;
+   // fifo_din = {4'h0, adc_data};
+    fifo_wr_ena = (cs == CAPTURE);
+    fifo_256b_done = (cs == CAPTURE) & (fifo_wr_cnt == 7'h7f);
 end
 
 always_ff @(posedge adc_clk) begin
     if (rst) begin
-        ram_addr <= 0;
-    end 
-    else begin
-        if (store_ena_sync) begin
-            ram_addr <= ram_addr + 1'b1;
-        end
-        else if (store_done_sync) begin
-            ram_addr <= 0;
+        fifo_din <= 16'h0001;
+    end else begin
+        if (cs == CAPTURE) begin
+            fifo_din <= fifo_din + 16'h0202;
         end
     end
 end
 
+always_ff @(posedge adc_clk) begin
+    if (rst) begin
+        fifo_wr_cnt <= 0;
+    end else begin
+        if (cs == IDLE) begin
+            fifo_wr_cnt <= 'h0;
+        end else if (cs == CAPTURE) begin
+            fifo_wr_cnt <= fifo_wr_cnt + 1; // use fifo_count
+        end
+    end
+end
+
+always_ff @(posedge adc_clk) begin
+    fifo_256b_done_r2 <= fifo_256b_done_r1;
+    fifo_256b_done_r1 <= fifo_256b_done;
+    fifo_256b_done_cdc <= fifo_256b_done | fifo_256b_done_r1 | fifo_256b_done_r2;
+end
+// clock domain crossing from 400M to 300MHz
+always_ff @(posedge dm_clk) begin
+    fifo_256b_done_sync <= fifo_256b_done_cdc;
+    fifo_256b_done_dm <= fifo_256b_done_sync;
+end
+
+always_ff @(posedge dm_clk) begin
+    if (dm_rst) begin
+        dm_cs <= DM_IDLE_s;
+        fifo_rd_cnt <= 'h0;
+    end else begin
+        dm_cs <= dm_ns;
+        fifo_rd_cnt <= fifo_rd_cnt_next;
+    end
+end
+
+always_comb begin
+    dm_ns = dm_cs;
+    case(dm_cs)
+        DM_IDLE_s: begin
+            if (fifo_256b_done_dm) dm_ns = DM_CMD_s;
+            else dm_ns = DM_IDLE_s;
+        end
+        DM_CMD_s: begin
+            if (i_s2mm_wr_cmd_tready) dm_ns = DM_DATA_s;
+            else dm_ns = DM_CMD_s;
+        end
+        DM_DATA_s: begin
+            if (fifo_rd_cnt == 5'h1f & i_s2mm_wr_tready) dm_ns = DM_WAIT_s; // i_s2mm_wr_tready?
+            else dm_ns = DM_DATA_s;
+        end
+        DM_WAIT_s: begin
+            if (s2mm_sts_tdata[3:0] == WR_EOF_VAL & s2mm_sts_tvalid & s2mm_sts_tlast) begin
+                dm_ns = DM_IDLE_s;
+            end else begin
+                dm_ns = DM_WAIT_s;
+            end
+        end
+        default: dm_ns = DM_IDLE_s;
+    endcase
+end
+
+always_comb begin
+    fifo_rd_cnt_next = fifo_rd_cnt;
+    fifo_rd_ena = 0;
+    o_s2mm_wr_cmd_tdata = 'h0;
+    o_s2mm_wr_cmd_tvalid = 0;
+    case(dm_cs)
+        DM_IDLE_s: begin
+            fifo_rd_cnt_next = 0;
+            fifo_rd_ena = 0;
+        end
+        DM_CMD_s: begin
+            o_s2mm_wr_cmd_tdata = {4'd0, WR_EOF_VAL, 32'h04000000, 1'b0, 8'd1, 14'd0, 9'd256};
+            o_s2mm_wr_cmd_tvalid = 1;
+        end
+        DM_DATA_s: begin
+            if (i_s2mm_wr_tready & ~fifo_empty) begin
+                fifo_rd_cnt_next = fifo_rd_cnt + 1;
+                fifo_rd_ena = 1;
+            end
+        end
+        DM_WAIT_s: begin
+            fifo_rd_cnt_next = 0;
+            fifo_rd_ena = 0;
+        end
+        default: begin
+            fifo_rd_cnt_next = 0;
+            fifo_rd_ena = 0;
+        end
+    endcase
+end
+
+always_comb begin
+    o_s2mm_wr_tdata = fifo_dout;
+    o_s2mm_wr_tvalid = ~fifo_empty & (dm_cs == DM_DATA_s);
+    o_s2mm_wr_tkeep = 'hff;
+    o_s2mm_wr_tlast = (fifo_rd_cnt == 5'h1f);
+end
 
 
+xpm_fifo_async # (
 
+  .FIFO_MEMORY_TYPE          ("auto"),           //string; "auto", "block", or "distributed";
+  .ECC_MODE                  ("no_ecc"),         //string; "no_ecc" or "en_ecc";
+  .RELATED_CLOCKS            (0),                //positive integer; 0 or 1
+  .FIFO_WRITE_DEPTH          (2048),             //positive integer
+  .WRITE_DATA_WIDTH          (16),               //positive integer
+  .WR_DATA_COUNT_WIDTH       (12),               //positive integer
+  .PROG_FULL_THRESH          (2040),               //positive integer
+  .FULL_RESET_VALUE          (0),                //positive integer; 0 or 1
+  .USE_ADV_FEATURES          ("0002"),           //string; "0000" to "1F1F"; 
+  .READ_MODE                 ("fwft"),            //string; "std" or "fwft";
+  .FIFO_READ_LATENCY         (1),                //positive integer;
+  .READ_DATA_WIDTH           (64),               //positive integer
+  .RD_DATA_COUNT_WIDTH       (10),               //positive integer
+  .PROG_EMPTY_THRESH         (10),               //positive integer
+  .DOUT_RESET_VALUE          ("0"),              //string
+  .CDC_SYNC_STAGES           (2),                //positive integer
+  .WAKEUP_TIME               (0)                 //positive integer; 0 or 2;
+
+) fifo_adc (
+
+  .rst              (rst),
+  .wr_clk           (adc_clk),
+  .wr_en            (fifo_wr_ena),
+  .din              (fifo_din),
+  .full             (fifo_full),
+  .overflow         (),
+  .prog_full        (),
+  .wr_data_count    (),
+  .almost_full      (),
+  .wr_ack           (),
+  .wr_rst_busy      (),
+  .rd_clk           (dm_clk),
+  .rd_en            (fifo_rd_ena),
+  .dout             (fifo_dout),
+  .empty            (fifo_empty),
+  .underflow        (),
+  .rd_rst_busy      (),
+  .prog_empty       (),
+  .rd_data_count    (),
+  .almost_empty     (),
+  .data_valid       (),
+  .sleep            (1'b0),
+  .injectsbiterr    (1'b0),
+  .injectdbiterr    (1'b0),
+  .sbiterr          (),
+  .dbiterr          ()
+
+);
 
 
 ila_adc0_ddr ila_adc0_ddr_i (

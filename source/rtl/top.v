@@ -43,7 +43,6 @@ module top (
     output          ad9517_sync_n,
     output          ad9517_cs_n,
 
-
     //output          spi_cs_n,
     output          spi_sclk,
     inout           spi_sdio,
@@ -51,14 +50,11 @@ module top (
     // iic
     inout           iic_sda,
     inout           iic_scl,
-
     //trig
     input           trig_in,
     output          trig_d,
     output          trig_rst,
-
     //DDR 
-
     input           sys_clk_200m_p,
     input           sys_clk_200m_n,
 
@@ -66,7 +62,10 @@ module top (
     output          hp_gpio0, //SMA3
     output          hp_gpio1, //SMA4
     output          hp_gpio2, //SMA5
-    output          hp_clk //SMA6
+    output          hp_clk, //SMA6
+    
+    // output led
+    output[3:0]     pl_led
 );
 localparam MOSI_DATA_WIDTH = 24;
 localparam MISO_DATA_WIDTH = 8;
@@ -86,6 +85,8 @@ wire        clk_100;
 wire        sys_clk_100m;
 wire        sys_clk_locked;
 wire        sys_clk_200m;
+wire        rst_20_n;
+wire        rst_20;
 /*
 wire        spi_mosi;
 wire        spi_miso;
@@ -102,8 +103,7 @@ wire        cfg_start_vio;
 reg         cfg_start_r;
 */
 wire        rst;
-wire        device_cfg_done;
-wire        device_cfg_start;
+
 wire        soft_rst;
 
 // --------------------------------------
@@ -153,6 +153,92 @@ clk_wiz_sys clk_wiz_sys_i (
 vio_sys vio_sys_inst (
     .clk(clk50m_in),
     .probe_in0(locked)
+);
+*/
+
+// --------------------------------------------------
+// Auto configuration
+// --------------------------------------------------
+wire        device_cfg_start;
+wire        device_cfg_done;
+reg [15:0]  cnt;
+reg [20:0]  led_cnt;
+reg         led_on;
+reset_bridge reset_bridge_20m_inst (
+    .clk   (clk_20),
+    .arst_n(locked),
+    .srst_n(rst_20_n)
+);
+
+assign rst_20 = ~rst_20_n;
+
+always @(posedge clk_20) begin
+    if (rst_20) begin
+        cnt <= 'h0;
+    end else begin
+        if (cnt == 16'hffff) begin
+            cnt <= cnt;
+        end else begin
+            cnt <= cnt + 1'd1;
+        end
+    end
+end
+
+assign device_cfg_start = (cnt == 16'hfffe);
+
+always @(posedge clk_20) begin
+    if (rst_20) begin
+        led_on <= 1'b0;
+    end else begin
+        if (device_cfg_done) begin
+            led_on <= 1'b1;
+        end
+    end
+end
+
+always @(posedge clk_20) begin
+    if (rst_20) begin
+        led_cnt <= 'h0;
+    end else if (led_on) begin
+        led_cnt <= led_cnt + 1'b1;
+    end // else
+end
+assign pl_led[0] = led_cnt[20];
+assign pl_led[3:1] = 3'b111;
+
+
+/*
+always @(posedge clk_20) begin
+    cfg_start_r <= cfg_start_vio;
+    cfg_start <= ~cfg_start_vio & cfg_start_r;
+end
+*/
+device_cfg #(
+    .MOSI_DATA_WIDTH( MOSI_DATA_WIDTH),
+    .MISO_DATA_WIDTH(MISO_DATA_WIDTH),
+    .INSTR_HEADER_LEN(INSTR_HEADER_LEN)
+
+)device_cfg_inst (
+    .clk_20(clk_20),
+    .rst(rst_20),
+    .soft_rst(1'b0),
+
+    .i_cfg_start(device_cfg_start),
+    .i_ad9517_locked(sys_clk_locked),
+    .o_cfg_done(device_cfg_done),
+    .ad9517_cs_n(ad9517_cs_n),
+    .adc0_cs_n(adc0_cs_n),
+    .adc1_cs_n(adc1_cs_n),
+    .spi_sclk(spi_sclk),
+    .spi_sdio(spi_sdio)
+);
+/*
+vio_0 vio_0_cfg (
+    .clk(clk_20),                // input wire clk
+    .probe_in0(device_cfg_done),
+    .probe_out0(device_cfg_start),  // output wire [0 : 0] probe_out0
+    .probe_out1(soft_rst) // output wire [0 : 0] probe_out1
+    
 );
 */
 //---------------------------------------------------
@@ -290,39 +376,7 @@ system bd_system(
     
 );
 
-/*
-always @(posedge clk_20) begin
-    cfg_start_r <= cfg_start_vio;
-    cfg_start <= ~cfg_start_vio & cfg_start_r;
-end
-*/
-device_cfg #(
-    .MOSI_DATA_WIDTH( MOSI_DATA_WIDTH),
-    .MISO_DATA_WIDTH(MISO_DATA_WIDTH),
-    .INSTR_HEADER_LEN(INSTR_HEADER_LEN)
 
-)device_cfg_inst (
-    .clk_20(clk_20),
-    .rst(rst),
-    .soft_rst(soft_rst),
-
-    .i_cfg_start(device_cfg_start),
-    .i_ad9517_locked(sys_clk_locked),
-    .o_cfg_done(device_cfg_done),
-    .ad9517_cs_n(ad9517_cs_n),
-    .adc0_cs_n(adc0_cs_n),
-    .adc1_cs_n(adc1_cs_n),
-    .spi_sclk(spi_sclk),
-    .spi_sdio(spi_sdio)
-);
-
-vio_0 vio_0_cfg (
-    .clk(clk_20),                // input wire clk
-    .probe_in0(device_cfg_done),
-    .probe_out0(device_cfg_start),  // output wire [0 : 0] probe_out0
-    .probe_out1(soft_rst) // output wire [0 : 0] probe_out1
-    
-);
 
 // IIC 
 wire           iic_busy;
