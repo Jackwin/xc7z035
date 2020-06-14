@@ -392,7 +392,7 @@ always_ff @(posedge sys_clk) begin
             end
             PRE_H_s: begin
                 wb_addr <= `PRE_H_ADDR;
-                wb_wr_data <= (PRE & 8'hff00) >> 8;
+                wb_wr_data <= (PRE & 16'hff00) >> 8;
                 wb_we <= 1;
                 wb_stb <= 1;
                 wb_cyc <= 1;

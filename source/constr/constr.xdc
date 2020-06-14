@@ -1,3 +1,6 @@
+
+
+
 ### reference clock
 set_property PACKAGE_PIN J14 [get_ports clk50m_in]
 set_property IOSTANDARD LVCMOS18 [get_ports clk50m_in]
@@ -143,10 +146,12 @@ set_property IOSTANDARD LVCMOS18 [get_ports iic_scl]
 
 
 ### LED bottom board
-#set_property PACKAGE_PIN E11  [get_ports b_pl_led1]
-#set_property PACKAGE_PIN C12  [get_ports b_pl_led2]
-#set_property PACKAGE_PIN E12  [get_ports b_pl_led3]
-#set_property PACKAGE_PIN D13  [get_ports b_pl_led4]
+set_property PACKAGE_PIN E11  [get_ports pl_led[0]]
+set_property PACKAGE_PIN C12  [get_ports pl_led[1]]
+set_property PACKAGE_PIN E12  [get_ports pl_led[2]]
+set_property PACKAGE_PIN D13  [get_ports pl_led[3]]
+set_property IOSTANDARD LVCMOS18 [get_ports pl_led[*]]
+
 
 ### LED core board
 set_property PACKAGE_PIN A15 [get_ports c_pl_led131]
@@ -183,6 +188,5 @@ set_property IOSTANDARD LVCMOS15 [get_ports hp_gpio1]
 set_property IOSTANDARD LVCMOS15 [get_ports hp_gpio2]
 set_property IOSTANDARD LVCMOS15 [get_ports hp_clk]
 
-
-create_clock -period 20.0 -name clk_50m -waveform {0.000 10.0} [get_ports clk50m_in]
+#create_clock -period 20.0 -name clk_50m -waveform {0.000 10.0} [get_ports clk50m_in]
 create_clock -period 5.000 -name sys_clk_200m -waveform {0.000 2.50} [get_ports sys_clk_200m_p]

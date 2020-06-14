@@ -1,7 +1,8 @@
 
 `timescale 1ns/1ps
 module ad9434_data #(
-    parameter WR_EOF_VAL = 4'b1010
+    parameter WR_EOF_VAL = 4'b1010,
+    parameter DDR_DES_ADDR = 32'h34000000
     ) (
     input           clk_200m,
     input           rst,
@@ -333,13 +334,13 @@ logic [4:0]     fifo_rd_cnt_next;
 
 
 // clock domain crossing
-always_ff @(posedge clk_200m) begin
+always_ff @(posedge adc_clk) begin
     i_trig_r <= i_trig;
     trig <= i_trig_r;
 end
 
 
-always_ff @(posedge clk_200m) begin
+always_ff @(posedge adc_clk) begin
     if (rst) begin
         cs <= IDLE;
     end
@@ -371,7 +372,7 @@ always_comb begin
     endcase
 end
 
-always_ff @(posedge clk_200m) begin
+always_ff @(posedge adc_clk) begin
     if (rst) begin
         cnt <= 0;
         us_cnt <= 0;
@@ -423,7 +424,7 @@ logic fifo_256b_done_cdc;
 logic fifo_256b_done_sync;
 logic fifo_256b_done_dm;
 always_comb begin
-    adc_data = {adc_data1, adc_data2};
+    //adc_data = {adc_data1, adc_data2};
    // fifo_din = {4'h0, adc_data};
     fifo_wr_ena = (cs == CAPTURE);
     fifo_256b_done = (cs == CAPTURE) & (fifo_wr_cnt == 7'h7f);
@@ -509,7 +510,7 @@ always_comb begin
             fifo_rd_ena = 0;
         end
         DM_CMD_s: begin
-            o_s2mm_wr_cmd_tdata = {4'd0, WR_EOF_VAL, 32'h04000000, 1'b0, 8'd1, 14'd0, 9'd256};
+            o_s2mm_wr_cmd_tdata = {4'd0, WR_EOF_VAL, DDR_DES_ADDR, 1'b0, 1'b1, 7'd1, 14'd0, 9'd256};
             o_s2mm_wr_cmd_tvalid = 1;
         end
         DM_DATA_s: begin
@@ -539,13 +540,13 @@ end
 
 xpm_fifo_async # (
 
-  .FIFO_MEMORY_TYPE          ("auto"),           //string; "auto", "block", or "distributed";
+  .FIFO_MEMORY_TYPE          ("block"),           //string; "auto", "block", or "distributed";
   .ECC_MODE                  ("no_ecc"),         //string; "no_ecc" or "en_ecc";
   .RELATED_CLOCKS            (0),                //positive integer; 0 or 1
   .FIFO_WRITE_DEPTH          (2048),             //positive integer
   .WRITE_DATA_WIDTH          (16),               //positive integer
   .WR_DATA_COUNT_WIDTH       (12),               //positive integer
-  .PROG_FULL_THRESH          (2040),               //positive integer
+  .PROG_FULL_THRESH          (2035),               //positive integer
   .FULL_RESET_VALUE          (0),                //positive integer; 0 or 1
   .USE_ADV_FEATURES          ("0002"),           //string; "0000" to "1F1F"; 
   .READ_MODE                 ("fwft"),            //string; "std" or "fwft";
@@ -593,10 +594,18 @@ ila_adc0_ddr ila_adc0_ddr_i (
 	.clk(adc_clk), // input wire clk
 	.probe0(adc_data1), // input wire [5:0]  probe0  
 	.probe1(adc_data2), // input wire [5:0]  probe1 
-	.probe2(adc_or), // input wire [0:0]  probe2 
+	.probe2(adc_or) // input wire [0:0]  probe2 
+	/*
 	.probe3(trig), // input wire [0:0]  probe3 
 	.probe4(cap_done), // input wire [0:0]  probe4 
 	.probe5(store_ena) // input wire [0:0]  probe5
+	*/
+);
+ila_adc_vtrl ila_adc_vtrl_inst (
+	.clk(clk_200m), // input wire clk
+	.probe0(trig), // input wire [0:0]  probe0  
+	.probe1(cap_done), // input wire [0:0]  probe1 
+	.probe2(store_ena) // input wire [0:0]  probe2
 );
 
 endmodule

@@ -130,7 +130,7 @@ always_comb begin
         end
     endcase
 end
-
+/*
 ila_device_cfg ila_device_cfg_inst (
 	.clk(clk_20), // input wire clk
 	.probe0(cs), // input wire [1:0]  probe0  
@@ -139,6 +139,7 @@ ila_device_cfg ila_device_cfg_inst (
 	.probe3(adc1_cfg_start), // input wire [0:0]  probe3 
 	.probe4(o_cfg_done) // input wire [0:0]  probe4
 );
+*/
 // ------------------------------------------------------------------------
 
 ad9517_cfg ad9517_cfg_i(
