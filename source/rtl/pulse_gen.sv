@@ -1,3 +1,16 @@
+
+/*
+This module is to generate a series of pulses.
+      _ _ _ _ _               _ _ _ _ _
+     /         \             /         \
+____/           \_ _ _ _ _ _/           \_ _ _ _
+    <-- width --><- gap_us->
+    < ------------   pulse_num   ------->
+
+The clk fre is 500Mhz, so the pulse width accuracy is 2 ns.
+When the pulses starts, a tirg signal is generated. 
+When the pulse ends, a done signal is generated.
+*/
 `timescale 1ns/1ps
 
 module pulse_gen (
@@ -232,7 +245,7 @@ OBUF #(
     .I(q1)      // Buffer input 
 );
  
-
+/*
 ila_pulse_gen ila_pulse_gen_ila (
 	.clk(clk_div), // input wire clk
 	.probe0(cs), // input wire [5:0]  probe0  
@@ -244,7 +257,7 @@ ila_pulse_gen ila_pulse_gen_ila (
 	.probe6(start_i), // input wire [0:0]  probe6 
 	.probe7(done) // input wire [0:0]  probe7
 );
-
+*/
 
 
 endmodule

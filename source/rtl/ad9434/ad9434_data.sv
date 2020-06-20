@@ -38,7 +38,7 @@ module ad9434_data #(
     output logic            o_s2mm_wr_tlast,
     input  logic            i_s2mm_wr_tready,
 
-    input  logic [7:0]      s2mm_sts_tdata,
+    input  logic [3:0]      s2mm_sts_tdata,
     input  logic            s2mm_sts_tvalid,
     input  logic            s2mm_sts_tkeep,
     input  logic            s2mm_sts_tlast
@@ -489,7 +489,7 @@ always_comb begin
             else dm_ns = DM_DATA_s;
         end
         DM_WAIT_s: begin
-            if (s2mm_sts_tdata[3:0] == WR_EOF_VAL & s2mm_sts_tvalid & s2mm_sts_tlast) begin
+            if (s2mm_sts_tdata[3:0] == WR_EOF_VAL & s2mm_sts_tvalid & s2mm_sts_tlast & s2mm_sts_tkeep) begin
                 dm_ns = DM_IDLE_s;
             end else begin
                 dm_ns = DM_WAIT_s;
@@ -607,5 +607,34 @@ ila_adc_vtrl ila_adc_vtrl_inst (
 	.probe1(cap_done), // input wire [0:0]  probe1 
 	.probe2(store_ena) // input wire [0:0]  probe2
 );
+
+ila_9434_rd ila_ad9434_inst (
+	.clk(dm_clk), // input wire clk
+
+
+	.probe0(i_s2mm_wr_cmd_tready), // input wire [0:0]  probe0  
+	.probe1(o_s2mm_wr_cmd_tdata), // input wire [71:0]  probe1 
+	.probe2(o_s2mm_wr_cmd_tvalid), // input wire [0:0]  probe2 
+	.probe3(o_s2mm_wr_tdata), // input wire [63:0]  probe3 
+	.probe4(o_s2mm_wr_tkeep), // input wire [7:0]  probe4 
+	.probe5(o_s2mm_wr_tvalid), // input wire [0:0]  probe5 
+	.probe6(o_s2mm_wr_tlast), // input wire [0:0]  probe6 
+	.probe7(i_s2mm_wr_tready), // input wire [0:0]  probe7 
+	.probe8(s2mm_sts_tdata), // input wire [3:0]  probe8 
+	.probe9(s2mm_sts_tvalid), // input wire [0:0]  probe9 
+	.probe10(s2mm_sts_tkeep), // input wire [0:0]  probe10 
+	.probe11(s2mm_sts_tlast), // input wire [0:0]  probe11 
+	.probe12(fifo_rd_ena), // input wire [0:0]  probe12 
+	.probe13(fifo_dout), // input wire [63:0]  probe13 
+	.probe14(fifo_rd_cnt), // input wire [4:0]  probe14 
+	.probe15(fifo_rd_cnt_next), // input wire [4:0]  probe15 
+	.probe16(dm_cs), // input wire [1:0]  probe16 
+	.probe17(fifo_empty), // input wire [0:0]  probe17 
+	.probe18(fifo_256b_done_dm), // input wire [0:0]  probe18 
+	.probe19(dm_rst) // input wire [0:0]  probe19
+);
+
+
+
 
 endmodule

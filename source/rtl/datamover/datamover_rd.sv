@@ -13,7 +13,7 @@ module datamover_rd (
     output logic            o_mm2s_rd_cmd_tvalid,
 
     input [63:0]            i_mm2s_rd_tdata,
-    input [7:0]             i_mms2_rd_tkeep,
+    input [7:0]             i_mm2s_rd_tkeep,
     input                   i_mm2s_rd_tvalid,
     input                   i_mm2s_rd_tlast,
     output                  o_mm2s_rd_tready
@@ -99,7 +99,7 @@ ila_datamover_rd ila_dm_rd (
 	.probe4(o_mm2s_rd_cmd_tdata), // input wire [71:0]  probe4 
 	.probe5(o_mm2s_rd_cmd_tvalid), // input wire [0:0]  probe5 
 	.probe6(i_mm2s_rd_tdata), // input wire [63:0]  probe6 
-	.probe7(i_mms2_rd_tkeep), // input wire [7:0]  probe7 
+	.probe7(i_mm2s_rd_tkeep), // input wire [7:0]  probe7 
 	.probe8(i_mm2s_rd_tvalid), // input wire [0:0]  probe8 
 	.probe9(i_mm2s_rd_tlast), // input wire [0:0]  probe9 
 	.probe10(o_mm2s_rd_tready) // input wire [0:0]  probe10

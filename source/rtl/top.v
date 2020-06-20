@@ -149,12 +149,12 @@ clk_wiz_sys clk_wiz_sys_i (
     .locked(locked),
     .clk50m_in(clk50m_in)
 ); 
-/*
+
 vio_sys vio_sys_inst (
     .clk(clk50m_in),
     .probe_in0(locked)
 );
-*/
+
 
 // --------------------------------------------------
 // Auto configuration
@@ -162,7 +162,7 @@ vio_sys vio_sys_inst (
 wire        device_cfg_start;
 wire        device_cfg_done;
 reg [15:0]  cnt;
-reg [20:0]  led_cnt;
+reg [24:0]  led_cnt;
 reg         led_on;
 reset_bridge reset_bridge_20m_inst (
     .clk   (clk_20),
@@ -203,7 +203,7 @@ always @(posedge clk_20) begin
         led_cnt <= led_cnt + 1'b1;
     end // else
 end
-assign pl_led[0] = led_cnt[20];
+assign pl_led[0] = led_cnt[24];
 assign pl_led[3:1] = 3'b111;
 
 
@@ -261,7 +261,7 @@ wire [1:0]      hp0_arburst;
 wire [3:0]      hp0_arcache;
 wire [3:0]      hp0_arid;
 wire [7:0]      hp0_arlen;
-wire [1:0]      hp0_arlock;
+wire            hp0_arlock;
 wire [2:0]      hp0_arprot;
 wire [3:0]      hp0_arqos;
 wire [2:0]      hp0_arsize;
@@ -272,7 +272,7 @@ wire [1:0]      hp0_awburst;
 wire [3:0]      hp0_awcache;
 wire [3:0]      hp0_awid;
 wire [7:0]      hp0_awlen;
-wire [1:0]      hp0_awlock;
+wire            hp0_awlock;
 wire [2:0]      hp0_awprot;
 wire [3:0]      hp0_awqos;
 wire [2:0]      hp0_awsize;
@@ -328,7 +328,7 @@ wire [1:0]      hp2_arburst;
 wire [3:0]      hp2_arcache;
 wire [3:0]      hp2_arid;
 wire [7:0]      hp2_arlen;
-wire [1:0]      hp2_arlock;
+wire            hp2_arlock;
 wire [2:0]      hp2_arprot;
 wire [3:0]      hp2_arqos;
 wire [2:0]      hp2_arsize;
@@ -339,7 +339,7 @@ wire [1:0]      hp2_awburst;
 wire [3:0]      hp2_awcache;
 wire [3:0]      hp2_awid;
 wire [7:0]      hp2_awlen;
-wire [1:0]      hp2_awlock;
+wire            hp2_awlock;
 wire [2:0]      hp2_awprot;
 wire [3:0]      hp2_awqos;
 wire [2:0]      hp2_awsize;
@@ -393,14 +393,15 @@ system bd_system(
     .i_clk_100(clk_100),
     .o_rst_300(rst_300),
     .i_locked(locked),
+    .i_rst_n(rstn),
     //AXI4 read addr
     .hp0_araddr(hp0_araddr),
     .hp0_arburst(hp0_arburst),
     .hp0_arcache(hp0_arcache),
     .hp0_arlen(hp0_arlen),
-    .hp0_arlock(hp0_arlock),
+   // .hp0_arlock(hp0_arlock),
     .hp0_arprot(hp0_arprot),
-    .hp0_arqos(hp0_arqos),
+   // .hp0_arqos(hp0_arqos),
     .hp0_arready(hp0_arready),
     .hp0_arsize(hp0_arsize),
     .hp0_arvalid(hp0_arvalid),
@@ -409,9 +410,9 @@ system bd_system(
     .hp0_awburst(hp0_awburst),
     .hp0_awcache(hp0_awcache),
     .hp0_awlen(hp0_awlen),
-    .hp0_awlock(hp0_awlock),
+   // .hp0_awlock(hp0_awlock),
     .hp0_awprot(hp0_awprot),
-    .hp0_awqos(hp0_awqos),
+   // .hp0_awqos(hp0_awqos),
     .hp0_awready(hp0_awready),
     .hp0_awsize(hp0_awsize),
     .hp0_awvalid(hp0_awvalid),
@@ -436,9 +437,9 @@ system bd_system(
     .hp2_arburst(hp2_arburst),
     .hp2_arcache(hp2_arcache),
     .hp2_arlen(hp2_arlen),
-    .hp2_arlock(hp2_arlock),
+    //.hp2_arlock(hp2_arlock),
     .hp2_arprot(hp2_arprot),
-    .hp2_arqos(hp2_arqos),
+   // .hp2_arqos(hp2_arqos),
     .hp2_arready(hp2_arready),
     .hp2_arsize(hp2_arsize),
     .hp2_arvalid(hp2_arvalid),
@@ -447,9 +448,9 @@ system bd_system(
     .hp2_awburst(hp2_awburst),
     .hp2_awcache(hp2_awcache),
     .hp2_awlen(hp2_awlen),
-    .hp2_awlock(hp2_awlock),
+   // .hp2_awlock(hp2_awlock),
     .hp2_awprot(hp2_awprot),
-    .hp2_awqos(hp2_awqos),
+   // .hp2_awqos(hp2_awqos),
     .hp2_awready(hp2_awready),
     .hp2_awsize(hp2_awsize),
     .hp2_awvalid(hp2_awvalid),
@@ -637,7 +638,7 @@ ad9434_data # (
     .o_s2mm_wr_tlast(adc0_user_s2mm_wr_tlast),
     .i_s2mm_wr_tready(adc0_user_s2mm_wr_tready),
 
-    .s2mm_sts_tdata(adc0_user_s2mm_sts_tdata),
+    .s2mm_sts_tdata(adc0_user_s2mm_sts_tdata[3:0]),
     .s2mm_sts_tvalid(adc0_user_s2mm_sts_tvalid),
     .s2mm_sts_tkeep(adc0_user_s2mm_sts_tkeep),
     .s2mm_sts_tlast(adc0_user_s2mm_sts_tlast)
@@ -680,7 +681,7 @@ ad9434_data # (
     .o_s2mm_wr_tlast(adc1_user_s2mm_wr_tlast),
     .i_s2mm_wr_tready(adc1_user_s2mm_wr_tready),
 
-    .s2mm_sts_tdata(adc1_user_s2mm_sts_tdata),
+    .s2mm_sts_tdata(adc1_user_s2mm_sts_tdata[3:0]),
     .s2mm_sts_tvalid(adc1_user_s2mm_sts_tvalid),
     .s2mm_sts_tkeep(adc1_user_s2mm_sts_tkeep),
     .s2mm_sts_tlast(adc1_user_s2mm_sts_tlast)
@@ -773,7 +774,7 @@ datamover datamover_hp0 (
     .s_axis_mm2s_cmd_tdata(adc0_user_mm2s_rd_cmd_tdata),            // input wire [71 : 0] s_axis_mm2s_cmd_tdata
 
     .m_axis_mm2s_tdata(adc0_user_mm2s_rd_tdata),                    // output wire [63 : 0] m_axis_mm2s_tdata
-    .m_axis_mm2s_tkeep(adc0user_mm2s_rd_tkeep),                    // output wire [7 : 0] m_axis_mm2s_tkeep
+    .m_axis_mm2s_tkeep(adc0_user_mm2s_rd_tkeep),                    // output wire [7 : 0] m_axis_mm2s_tkeep
     .m_axis_mm2s_tlast(adc0_user_mm2s_rd_tlast),                    // output wire m_axis_mm2s_tlast
     .m_axis_mm2s_tvalid(adc0_user_mm2s_rd_tvalid),                  // output wire m_axis_mm2s_tvalid
     .m_axis_mm2s_tready(adc0_user_mm2s_rd_tready),                  // input wire m_axis_mm2s_tready
@@ -940,7 +941,7 @@ datamover_rd  adc0_datamover_rd_inst(
     .o_mm2s_rd_cmd_tvalid(adc0_user_mm2s_rd_cmd_tvalid),
 
     .i_mm2s_rd_tdata(adc0_user_mm2s_rd_tdata),
-    .i_mms2_rd_tkeep(adc0_user_mm2s_rd_tkeep),
+    .i_mm2s_rd_tkeep(adc0_user_mm2s_rd_tkeep),
     .i_mm2s_rd_tvalid(adc0_user_mm2s_rd_tvalid),
     .i_mm2s_rd_tlast(adc0_user_mm2s_rd_tlast),
     .o_mm2s_rd_tready(adc0_user_mm2s_rd_tready)
@@ -966,7 +967,7 @@ datamover_rd  adc1_datamover_rd_inst(
     .o_mm2s_rd_cmd_tvalid(adc1_user_mm2s_rd_cmd_tvalid),
 
     .i_mm2s_rd_tdata(adc1_user_mm2s_rd_tdata),
-    .i_mms2_rd_tkeep(adc1_user_mm2s_rd_tkeep),
+    .i_mm2s_rd_tkeep(adc1_user_mm2s_rd_tkeep),
     .i_mm2s_rd_tvalid(adc1_user_mm2s_rd_tvalid),
     .i_mm2s_rd_tlast(adc1_user_mm2s_rd_tlast),
     .o_mm2s_rd_tready(adc1_user_mm2s_rd_tready)
