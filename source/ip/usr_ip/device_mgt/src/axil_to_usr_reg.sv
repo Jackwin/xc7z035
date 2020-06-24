@@ -158,9 +158,6 @@ module axil_to_usr_reg #
             axil_wdata <= s_axil_wdata;
     end
 
-    logic [DATA_WIDTH-1:0]    reg_wdata;
-    logic [ADDR_WIDTH-1:0]    reg_waddr;
-
     always_ff @(posedge clk) begin
         if (rst) begin
             usr_reg_waddr <= 'h0;
@@ -190,6 +187,7 @@ module axil_to_usr_reg #
 
     assign usr_reg_ren = reg_rden;
     assign usr_reg_raddr = {axil_araddr[ADDR_WIDTH-1:2], 2'b0}; // 32-bit address
+    assign axil_rdata = usr_reg_rdata;
 
 
 endmodule
