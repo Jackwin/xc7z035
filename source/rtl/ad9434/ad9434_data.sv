@@ -424,12 +424,12 @@ logic fifo_256b_done_cdc;
 logic fifo_256b_done_sync;
 logic fifo_256b_done_dm;
 always_comb begin
-    //adc_data = {adc_data1, adc_data2};
-   // fifo_din = {4'h0, adc_data};
+    adc_data = {adc_data1, adc_data2};
+    fifo_din = {4'h0, adc_data};
     fifo_wr_ena = (cs == CAPTURE);
     fifo_256b_done = (cs == CAPTURE) & (fifo_wr_cnt == 7'h7f);
 end
-
+/*
 always_ff @(posedge adc_clk) begin
     if (rst) begin
         fifo_din <= 16'h0001;
@@ -439,6 +439,7 @@ always_ff @(posedge adc_clk) begin
         end
     end
 end
+*/
 
 always_ff @(posedge adc_clk) begin
     if (rst) begin

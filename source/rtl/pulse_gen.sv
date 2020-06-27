@@ -115,8 +115,6 @@ always_comb begin
     endcase
 end
 
-
-
 always_ff @(posedge clk_div) begin
     if (rst) begin
         data <= 0;
