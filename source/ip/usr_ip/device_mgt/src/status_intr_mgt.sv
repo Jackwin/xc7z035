@@ -86,12 +86,11 @@ localparam 	IDLE_s=0,
 
 logic intr_fifo_empty;
 logic intr_fifo_ren;
-logic intr_fifo_ren_d1;
 
-logic [INTR_MSG_WIDTH:0] intr_fifo_dout;
+logic [INTR_MSG_WIDTH-1:0] intr_fifo_dout;
 
 logic interrpt_en;
-logic [INTR_MSG_WIDTH:0] intr_reg;
+logic [INTR_MSG_WIDTH-1:0] intr_reg;
 
 
 always_ff @(posedge clk ) begin
