@@ -375,9 +375,48 @@ wire [7:0]      adc1_user_s2mm_sts_tdata;
 wire            adc1_user_s2mm_sts_tkeep;
 wire            adc1_user_s2mm_sts_tlast;
 
-//---------------------------------------------
+//---------------------------------------------------
+// fpga device management
+// --------------------------------------------------
+localparam INTR_MSG_WIDTH = 8;
+localparam TEMPER_WIDTH = 12;
+
+wire                        usr_reg_wen;
+wire [11:0]                 usr_reg_waddr;
+wire [31:0]                 usr_reg_wdata;
+wire                        usr_reg_ren;
+wire [11:0]                 usr_reg_raddr;
+wire [31:0]                 usr_reg_rdata;
+wire [31:0]                 status_reg_data;
+wire                        status_reg_valid;
+wire [31:0]                 ctrl_reg_data;
+wire                        ctrl_reg_valid;
+wire                        intr_ready;
+wire [INTR_MSG_WIDTH-1:0]   intr_msg;
+wire [TEMPER_WIDTH-1:0]     temper;
+wire                        temper_valid;
+wire [31:0]                 version;
+wire                        soft_rst;
 
 
+usr_reg_rd_switch # (
+    .DATA_WIDTH(32),
+    .ADDR_WIDTH(12)
+)usr_reg_rd_switch_inst (
+    .clk(clk_100),
+    .rst(rst),
+    .i_usr_reg_rd(usr_reg_ren),
+    .i_usr_reg_addr(usr_reg_raddr),
+    .o_usr_reg_data(usr_reg_rdata),
+
+    .i_status_reg_data(status_reg_data),
+    .i_status_reg_valid(status_reg_valid),
+
+    .i_ctrl_reg_data(ctrl_reg_data),
+    .i_ctrl_reg_valid(ctrl_reg_valid)
+);
+
+//--------------------------------------------------
 
 wire            rst_300;
 
@@ -476,7 +515,21 @@ system bd_system(
     .adc_bram_dout(adc0_bram_dout),
     .adc_bram_en(adc0_bram_ena),
     .adc_bram_rst(adc0_bram_rst),
-    .adc_bram_we(adc0_bram_wea)
+    .adc_bram_we(adc0_bram_wea),
+
+    //devive management
+    .i_temper(temper),
+    .i_temper_valid(temper_valid),
+    .i_usr_reg_rdata(usr_reg_rdata),
+    .i_version(version),
+    .o_soft_rst(soft_rst),
+    .o_status_reg_data(status_reg_data),
+    .o_status_reg_valid(status_reg_valid),
+    .o_usr_reg_raddr(usr_reg_raddr),
+    .o_usr_reg_ren(usr_reg_ren),
+    .o_usr_reg_waddr(usr_reg_waddr),
+    .o_usr_reg_wdata(usr_reg_wdata),
+    .o_usr_reg_wen(usr_reg_wen)
     
 );
 
