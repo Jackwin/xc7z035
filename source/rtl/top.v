@@ -122,8 +122,8 @@ wire        adc0_bram_wea;
 
 
 
-assign eth_mdio = ~mdio_t ? mdio_o : 1'bz;
-assign mdio_i = eth_mdio;
+//assign eth_mdio = ~mdio_t ? mdio_o : 1'bz;
+//assign mdio_i = eth_mdio;
 
 assign ad9517_reset_n = 1'b1;
 assign ad9517_pd_n = 1'b1;
@@ -173,7 +173,7 @@ wire        device_cfg_done;
 reg [15:0]  cnt;
 reg [24:0]  led_cnt;
 reg         led_on;
-reset_bridge reset_bridge_20m_inst (
+reset_bridge reset_bridge_200_inst (
     .clk   (clk_20),
     .arst_n(locked),
     .srst_n(rst_20_n)
@@ -397,10 +397,11 @@ localparam AD5339_CTR_REG_ADDR = 12'h040;
 wire                        usr_reg_wen;
 wire [11:0]                 usr_reg_waddr;
 wire [31:0]                 usr_reg_wdata;
-wire                        usr_reg_wen_r;
-wire [11:0]                 usr_reg_waddr_r;
-wire [31:0]                 usr_reg_wdata_r;
+reg                         usr_reg_wen_r;
+reg [11:0]                  usr_reg_waddr_r;
+reg [31:0]                  usr_reg_wdata_r;
 wire                        usr_reg_ren;
+reg                         usr_reg_ren_r;
 wire [11:0]                 usr_reg_raddr;
 wire [31:0]                 usr_reg_rdata;
 wire [31:0]                 status_reg_data;
@@ -412,7 +413,7 @@ wire [INTR_MSG_WIDTH-1:0]   intr_msg;
 wire [TEMPER_WIDTH-1:0]     temper;
 wire                        temper_valid;
 wire [31:0]                 version;
-wire                        soft_rst;
+
 
 
 usr_reg_rd_switch # (
@@ -437,12 +438,16 @@ usr_reg_rd_switch # (
 wire            rst_300;
 wire            rst_100;
 
-wire [15:0]    gap_us;
-wire [10:0]    pulse_num;
-wire [10:0]    pulse_width;
-wire           pulse_gen_start;
-wire           pulse_gen_trig;
-wire           pulse_gen_done;
+wire [15:0]     gap_us;
+wire [10:0]     pulse_num;
+wire [10:0]     pulse_width;
+wire            pulse_gen_start;
+wire            pulse_gen_trig;
+wire            pulse_gen_done;
+
+wire            mdio_phy_mdio_i;
+wire            mdio_phy_mdio_o;
+wire            mdio_phy_mdio_t;
 
 system bd_system(
     .i_clk_300(clk_300),
@@ -545,7 +550,9 @@ system bd_system(
     .rgmii_tx_ctl(eth_tx_ctl),
     .rgmii_txc(eth_tx_clk),
     .mdio_phy_mdc(eth_mdc),
-    .mdio_phy_mdio_io(eth_mdio),
+    .mdio_phy_mdio_i(mdio_phy_mdio_i),
+    .mdio_phy_mdio_o(mdio_phy_mdio_o),
+    .mdio_phy_mdio_t(mdio_phy_mdio_t),
     .o_eth_reset_n(eth_reset_n),
 
     //devive management
@@ -564,10 +571,18 @@ system bd_system(
     
 );
 
+IOBUF mdio_phy_mdio_iobuf (
+    .I(mdio_phy_mdio_o),
+    .IO(eth_mdio),
+    .O(mdio_phy_mdio_i),
+    .T(mdio_phy_mdio_t)
+);
+
 always @(posedge clk_100) begin
     usr_reg_waddr_r <= usr_reg_waddr;
     usr_reg_wen_r <= usr_reg_wen;
     usr_reg_wdata_r <= usr_reg_wdata;
+    usr_reg_ren_r <= usr_reg_ren;
 
 end
 
@@ -578,7 +593,7 @@ reg            ad5339_wr_req;
 wire           ad5339_wr_ack;
 wire           ad5339_wr_done;
 
-wire           ad5339_rd_req;
+reg           ad5339_rd_req;
 //wire [7:0]     ad5339_rd_addr;
 wire           ad5339_rd_ack;
 wire [15:0]    ad5339_rd_data;
@@ -650,7 +665,7 @@ always @(posedge clk_100) begin
         if (ad5339_rd_ack) begin
             ad5339_rd_req <= 1'b0;
         end else if ((usr_reg_raddr == AD5339_CTR_REG_ADDR) & usr_reg_ren & ~usr_reg_ren_r) begin
-            ad5339_wr_req <= 1'b1;
+            ad5339_rd_req <= 1'b1;
         end
     end
 end

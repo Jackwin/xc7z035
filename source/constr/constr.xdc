@@ -35,7 +35,7 @@ set_property PACKAGE_PIN A12 [get_ports {eth_rxd[3]}]
 set_property IOSTANDARD LVCMOS18 [get_ports {eth_txd[*]}]
 
 set_property IOSTANDARD LVCMOS18 [get_ports eth_tx_clk]
-#set_property IOSTANDARD LVCMOS18 [get_ports {eth_rx_clk}]
+set_property IOSTANDARD LVCMOS18 [get_ports {eth_rx_clk}]
 set_property IOSTANDARD LVCMOS18 [get_ports eth_mdc]
 set_property IOSTANDARD LVCMOS18 [get_ports eth_rx_ctl]
 set_property IOSTANDARD LVCMOS18 [get_ports eth_mdio]

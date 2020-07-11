@@ -3,7 +3,7 @@
 module reset_bridge (
     input       clk,    // Clock
     input       arst_n,  // Asynchronous reset active low
-    output reg  srst,
+    output      srst,
     output reg  srst_n
 
 
