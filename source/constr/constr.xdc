@@ -11,8 +11,8 @@ set_property IOSTANDARD LVCMOS18 [get_ports rstn]
 
 ### PL ethernet
 
-set_property PACKAGE_PIN D11 [get_ports eth_gtx_clk]
-set_property PACKAGE_PIN B12 [get_ports eth_tx_en]
+set_property PACKAGE_PIN D11 [get_ports eth_tx_clk]
+set_property PACKAGE_PIN B12 [get_ports eth_tx_ctl]
 
 set_property PACKAGE_PIN E10 [get_ports {eth_txd[0]}]
 set_property PACKAGE_PIN G10 [get_ports {eth_txd[1]}]
@@ -25,7 +25,7 @@ set_property PACKAGE_PIN B17 [get_ports eth_mdio]
 set_property PACKAGE_PIN A17 [get_ports eth_reset_n]
 
 set_property PACKAGE_PIN F15 [get_ports eth_rx_clk]
-set_property PACKAGE_PIN B15 [get_ports eth_rx_dv]
+set_property PACKAGE_PIN B15 [get_ports eth_rx_ctl]
 
 set_property PACKAGE_PIN A14 [get_ports {eth_rxd[0]}]
 set_property PACKAGE_PIN B14 [get_ports {eth_rxd[1]}]
@@ -34,13 +34,13 @@ set_property PACKAGE_PIN A12 [get_ports {eth_rxd[3]}]
 
 set_property IOSTANDARD LVCMOS18 [get_ports {eth_txd[*]}]
 
-set_property IOSTANDARD LVCMOS18 [get_ports eth_gtx_clk]
+set_property IOSTANDARD LVCMOS18 [get_ports eth_tx_clk]
 #set_property IOSTANDARD LVCMOS18 [get_ports {eth_rx_clk}]
 set_property IOSTANDARD LVCMOS18 [get_ports eth_mdc]
-set_property IOSTANDARD LVCMOS18 [get_ports eth_rx_dv]
+set_property IOSTANDARD LVCMOS18 [get_ports eth_rx_ctl]
 set_property IOSTANDARD LVCMOS18 [get_ports eth_mdio]
 set_property IOSTANDARD LVCMOS18 [get_ports eth_reset_n]
-set_property IOSTANDARD LVCMOS18 [get_ports eth_tx_en]
+set_property IOSTANDARD LVCMOS18 [get_ports eth_tx_ctl]
 set_property IOSTANDARD LVCMOS18 [get_ports {eth_rxd[*]}]
 
 

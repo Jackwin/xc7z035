@@ -12,26 +12,28 @@
 `define TXR_RXR_ADDR 3'd3
 `define CR_SR_ADDR 3'd4
 
-module  ad5339_cfg (
-    input logic             sys_clk,
-    input logic             sys_rst,
+module  ad5339_cfg # (
+    parameter CLK_FREQ = 20
+    )(
+    input logic                         sys_clk,
+    input logic                         sys_rst,
 
-    input logic [6:0]       device_addr,
-    input logic [IIC_DATA_WIDTH-1:0]       iic_wr_data,
-    input logic             iic_wr_req,
-    output logic            iic_wr_ack,
+    input logic [6:0]                   device_addr,
+    input logic [IIC_DATA_WIDTH-1:0]    iic_wr_data,
+    input logic                         iic_wr_req,
+    output logic                        iic_wr_ack,
 
-    output logic            iic_wr_done,
+    output logic                        iic_wr_done,
 
-    input logic             iic_rd_req,
+    input logic                         iic_rd_req,
    // input logic [7:0]       iic_rd_addr,
-    output logic            iic_rd_ack,
-    output logic            iic_rd_done,
-    output logic [IIC_DATA_WIDTH-1:0]      iic_rd_data,
-    output logic            iic_busy_o,
+    output logic                        iic_rd_ack,
+    output logic                        iic_rd_done,
+    output logic [IIC_DATA_WIDTH-1:0]   iic_rd_data,
+    output logic                        iic_busy_o,
 
-    inout reg                  scl,
-    inout reg                   sda         
+    inout reg                           scl,
+    inout reg                           sda         
 );
 
 parameter IIC_DATA_WIDTH = 16;
@@ -67,7 +69,7 @@ localparam  IDLE_s = 5'd0,
 
 
 
-localparam PRE = 20 * 1000 / (5 * SCL_FRE) - 1;
+localparam PRE = CLK_FREQ * 1000 / (5 * SCL_FRE) - 1;
 localparam WR_RD_NUM = IIC_DATA_WIDTH/8;
 /*
 logic [7:0]     iic_wr_data;
@@ -793,31 +795,6 @@ assign    scl = ~scl_padoen_o? scl_pad_o : 1'bz;
 assign    sda = ~sda_padoen_o? sda_pad_o : 1'bz;
  assign   sda_pad_i = sda;
 //end
-/*
-ila_ad5339_cfg ila_ad5339_cfg_i (
-	.clk(sys_clk), // input wire clk
 
-	.probe0(cs), // input wire [4:0]  probe0  
-	.probe1(ns), // input wire [4:0]  probe1 
-	.probe2(wb_wr_data), // input wire [7:0]  probe2 
-	.probe3(wb_rd_data), // input wire [7:0]  probe3 
-	.probe4(wb_addr), // input wire [2:0]  probe4 
-	.probe5(rd_step), // input wire [1:0]  probe5 
-	.probe6(wb_we), // input wire [0:0]  probe6 
-	.probe7(wb_stb), // input wire [0:0]  probe7 
-	.probe8(wb_cyc), // input wire [0:0]  probe8 
-	.probe9(wb_ack), // input wire [0:0]  probe9 
-	.probe10(wb_intr), // input wire [0:0]  probe10 
-	.probe11(wr_step), // input wire [1:0]  probe11 
-	.probe12(wr_cmd_flag), // input wire [0:0]  probe12 
-	.probe13(wr_data_flag), // input wire [0:0]  probe13 
-	.probe14(scl_pad_i), // input wire [0:0]  probe14 
-	.probe15(scl_padoen_o), // input wire [0:0]  probe15
-    .probe16(scl_pad_o), // input wire [0:0]  probe16 
-	.probe17(sda_pad_i), // input wire [0:0]  probe17 
-	.probe18(sda_pad_o), // input wire [0:0]  probe18 
-	.probe19(sda_padoen_o) // input wire [0:0]  probe19
-);
-*/
 
 endmodule

@@ -3,12 +3,12 @@ module top (
     input           rstn,
 
     input [3:0]     eth_rxd,
-    input           eth_rx_dv,
+    input           eth_rx_ctl,
     input           eth_rx_clk,
 
     output [3:0]    eth_txd,
-    output          eth_tx_en,
-    output          eth_gtx_clk,
+    output          eth_tx_ctl,
+    output          eth_tx_clk,
 
     output          eth_mdc,
     inout           eth_mdio,
@@ -73,11 +73,14 @@ localparam INSTR_HEADER_LEN = 16;
 
 localparam AD5339_DEVICE_ADDR = 7'b0001100;
 
+
+
+
 wire        mdio_t;
 wire        mdio_i;
 wire        mdio_o;
 wire        locked;
-wire        clk_200m;
+wire        clk_200;
 wire        clk_20;
 wire        clk_800m;
 wire        clk_300;
@@ -103,8 +106,8 @@ wire        cfg_start_vio;
 reg         cfg_start_r;
 */
 wire        rst;
-
 wire        soft_rst;
+wire        rst_200;
 
 // --------------------------------------
 // ADC BRAM
@@ -141,7 +144,7 @@ assign c_pl_led141 = 1'b0;
 assign rst = ~rstn;
 
 clk_wiz_sys clk_wiz_sys_i (
-    .clk_200(clk_200m),
+    .clk_200(clk_200),
     .clk_20(clk_20),
     .clk_300(clk_300),
     .clk_100(clk_100),
@@ -153,6 +156,12 @@ clk_wiz_sys clk_wiz_sys_i (
 vio_sys vio_sys_inst (
     .clk(clk50m_in),
     .probe_in0(locked)
+);
+
+reset_bridge reset_bridge_20m_inst (
+    .clk   (clk_200),
+    .arst_n(locked),
+    .srst(rst_200)
 );
 
 
@@ -381,16 +390,23 @@ wire            adc1_user_s2mm_sts_tlast;
 localparam INTR_MSG_WIDTH = 8;
 localparam TEMPER_WIDTH = 12;
 
+// ---------------- control register -------------
+// The control register address starts from 0x040
+localparam AD5339_CTR_REG_ADDR = 12'h040;
+
 wire                        usr_reg_wen;
 wire [11:0]                 usr_reg_waddr;
 wire [31:0]                 usr_reg_wdata;
+wire                        usr_reg_wen_r;
+wire [11:0]                 usr_reg_waddr_r;
+wire [31:0]                 usr_reg_wdata_r;
 wire                        usr_reg_ren;
 wire [11:0]                 usr_reg_raddr;
 wire [31:0]                 usr_reg_rdata;
 wire [31:0]                 status_reg_data;
 wire                        status_reg_valid;
-wire [31:0]                 ctrl_reg_data;
-wire                        ctrl_reg_valid;
+reg  [31:0]                 ctrl_reg_rdata;
+reg                         ctrl_reg_rdata_valid;
 wire                        intr_ready;
 wire [INTR_MSG_WIDTH-1:0]   intr_msg;
 wire [TEMPER_WIDTH-1:0]     temper;
@@ -412,13 +428,14 @@ usr_reg_rd_switch # (
     .i_status_reg_data(status_reg_data),
     .i_status_reg_valid(status_reg_valid),
 
-    .i_ctrl_reg_data(ctrl_reg_data),
-    .i_ctrl_reg_valid(ctrl_reg_valid)
+    .i_ctrl_reg_data(ctrl_reg_rdata),
+    .i_ctrl_reg_valid(ctrl_reg_rdata_valid)
 );
 
 //--------------------------------------------------
 
 wire            rst_300;
+wire            rst_100;
 
 wire [15:0]    gap_us;
 wire [10:0]    pulse_num;
@@ -430,7 +447,10 @@ wire           pulse_gen_done;
 system bd_system(
     .i_clk_300(clk_300),
     .i_clk_100(clk_100),
+    .i_clk_200(clk_200),
     .o_rst_300(rst_300),
+    .o_rst_100(rst_100),
+    .i_rst_200(rst_200),
     .i_locked(locked),
     .i_rst_n(rstn),
     //AXI4 read addr
@@ -517,6 +537,17 @@ system bd_system(
     .adc_bram_rst(adc0_bram_rst),
     .adc_bram_we(adc0_bram_wea),
 
+    // Ethernet
+    .rgmii_rd(eth_rxd),
+    .rgmii_rx_ctl(eth_rx_ctl),
+    .rgmii_rxc(eth_rx_clk),
+    .rgmii_td(eth_txd),
+    .rgmii_tx_ctl(eth_tx_ctl),
+    .rgmii_txc(eth_tx_clk),
+    .mdio_phy_mdc(eth_mdc),
+    .mdio_phy_mdio_io(eth_mdio),
+    .o_eth_reset_n(eth_reset_n),
+
     //devive management
     .i_temper(temper),
     .i_temper_valid(temper_valid),
@@ -533,12 +564,17 @@ system bd_system(
     
 );
 
+always @(posedge clk_100) begin
+    usr_reg_waddr_r <= usr_reg_waddr;
+    usr_reg_wen_r <= usr_reg_wen;
+    usr_reg_wdata_r <= usr_reg_wdata;
 
+end
 
 // IIC 
 wire           iic_busy;
 wire [15:0]    ad5339_wr_data;
-wire           ad5339_wr_req;
+reg            ad5339_wr_req;
 wire           ad5339_wr_ack;
 wire           ad5339_wr_done;
 
@@ -549,8 +585,10 @@ wire [15:0]    ad5339_rd_data;
 wire           ad5339_rd_done;
 
 // ------------------------------------------- AD5339 ------------------------------------
-ad5339_cfg ad5339_cfg_i (
-    .sys_clk(clk_20),
+ad5339_cfg # (
+    .CLK_FREQ (100)
+    )ad5339_cfg_i (
+    .sys_clk(clk_100),
     .sys_rst(rst),
     .device_addr(AD5339_DEVICE_ADDR),
     .iic_wr_data(ad5339_wr_data),
@@ -582,12 +620,53 @@ ila_ad5339 ila_ad5339_i (
 	.probe8(iic_busy) // input wire [0:0]  probe8
 );
 */
+/*
 vio_ad5339 vio_ad5339_i (
   .clk(clk_20),                // input wire clk
   .probe_out0(ad5339_wr_req),  // output wire [0 : 0] probe_out0
   .probe_out1(ad5339_rd_req),  // output wire [0 : 0] probe_out1
   .probe_out2(ad5339_wr_data)  // output wire [15 : 0] probe_out2
 );
+*/
+
+always @(posedge clk_100) begin
+    if (rst_100) begin
+        ad5339_wr_req <= 1'b0;
+    end else begin
+        if (ad5339_wr_ack) begin
+            ad5339_wr_req <= 1'b0;
+        end else if ((usr_reg_waddr == AD5339_CTR_REG_ADDR) & usr_reg_wen & ~usr_reg_wen_r) begin
+            ad5339_wr_req <= 1'b1;
+        end
+    end
+end
+
+assign ad5339_wr_data = usr_reg_wdata[15:0];
+
+always @(posedge clk_100) begin
+    if (rst_100) begin
+        ad5339_rd_req <= 1'b0;
+    end else begin
+        if (ad5339_rd_ack) begin
+            ad5339_rd_req <= 1'b0;
+        end else if ((usr_reg_raddr == AD5339_CTR_REG_ADDR) & usr_reg_ren & ~usr_reg_ren_r) begin
+            ad5339_wr_req <= 1'b1;
+        end
+    end
+end
+
+always @(posedge clk_100) begin
+    if (rst_100) begin
+        ctrl_reg_rdata_valid <= 1'b0;
+    end else if (usr_reg_raddr == AD5339_CTR_REG_ADDR) begin
+        ctrl_reg_rdata <= {16'h0, ad5339_rd_data};
+        ctrl_reg_rdata_valid <= ad5339_rd_done;
+    end else begin
+        ctrl_reg_rdata_valid <= 'h0;
+        ctrl_reg_rdata <= 'h0;
+    end
+end
+
 
 // -------------------------------------- trig ----------------------------------------
 
@@ -668,8 +747,8 @@ ad9434_data # (
     .WR_EOF_VAL(4'b1010),
     .DDR_DES_ADDR(32'h3000_0000)
     ) ad9434_data_0(
-    .rst(rst),
-    .clk_200m(clk_200m),
+    .rst(rst_200),
+    .clk_200m(clk_200),
     .i_trig(pulse_gen_trig),
     .i_us_capture(10'd10),
     .i_adc0_din_p(adc0_din_p),
@@ -711,8 +790,8 @@ ad9434_data # (
     .WR_EOF_VAL(4'b1010),
     .DDR_DES_ADDR(32'h3400_0000)
     )ad9434_data_1(
-    .rst(rst),
-    .clk_200m(clk_200m),
+    .rst(rst_200),
+    .clk_200m(clk_200),
     .i_trig(pulse_gen_trig),
     .i_us_capture(10'd10),
     .i_adc0_din_p(adc1_din_p),

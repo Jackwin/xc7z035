@@ -1,10 +1,10 @@
 `timescale 1ns/1ps
 
 module reset_bridge (
-    input clk,    // Clock
-    input arst_n,  // Asynchronous reset active low
-
-    output reg srst_n
+    input       clk,    // Clock
+    input       arst_n,  // Asynchronous reset active low
+    output reg  srst,
+    output reg  srst_n
 
 
 );
@@ -29,5 +29,6 @@ always @(posedge clk) begin
     buffer[0] <= q[2];
 end // always @(posedge clk)
 
+assign srst = ~srst_n;
 
 endmodule
