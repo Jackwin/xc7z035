@@ -158,7 +158,7 @@ vio_sys vio_sys_inst (
     .probe_in0(locked)
 );
 
-reset_bridge reset_bridge_20m_inst (
+reset_bridge reset_bridge_200m_inst (
     .clk   (clk_200),
     .arst_n(locked),
     .srst(rst_200)
@@ -173,7 +173,7 @@ wire        device_cfg_done;
 reg [15:0]  cnt;
 reg [24:0]  led_cnt;
 reg         led_on;
-reset_bridge reset_bridge_200_inst (
+reset_bridge reset_bridge_20_inst (
     .clk   (clk_20),
     .arst_n(locked),
     .srst_n(rst_20_n)
@@ -762,7 +762,7 @@ ad9434_data # (
     .WR_EOF_VAL(4'b1010),
     .DDR_DES_ADDR(32'h3000_0000)
     ) ad9434_data_0(
-    .rst(rst_200),
+    .rst(rst),
     .clk_200m(clk_200),
     .i_trig(pulse_gen_trig),
     .i_us_capture(10'd10),
@@ -805,7 +805,7 @@ ad9434_data # (
     .WR_EOF_VAL(4'b1010),
     .DDR_DES_ADDR(32'h3400_0000)
     )ad9434_data_1(
-    .rst(rst_200),
+    .rst(rst),
     .clk_200m(clk_200),
     .i_trig(pulse_gen_trig),
     .i_us_capture(10'd10),
