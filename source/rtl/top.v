@@ -109,6 +109,9 @@ wire        rst;
 wire        soft_rst;
 wire        rst_200;
 
+wire        interrupt;
+wire [3:0]  gpio;
+
 // --------------------------------------
 // ADC BRAM
 
@@ -433,6 +436,37 @@ usr_reg_rd_switch # (
     .i_ctrl_reg_valid(ctrl_reg_rdata_valid)
 );
 
+//--------------------------------------------
+// cfg_ram 
+//--------------------------------------------
+reg [10:0]      cfg_ram_addr;
+wire            cfg_ram_clk;
+wire            cfg_ram_rst;
+reg [31:0]      cfg_ram_din;
+wire [31:0]     cfg_ram_dout;
+reg             cfg_ram_ena;
+wire [3:0]      cfg_ram_byte_ena;
+reg             led0_r0;
+
+always @(posedge clk_100) begin
+    led0_r0 <= gpio[0];
+    cfg_ram_ena <= ~led0_r0 & gpio[0];
+end
+
+always @(*) begin
+    if (cfg_ram_ena) begin
+        cfg_ram_addr <= 'd1;
+        cfg_ram_din <= 32'h12345678;
+    end else begin
+        cfg_ram_addr <= 'd0;
+        cfg_ram_din <= 32'h0;
+    end
+end
+
+assign cfg_ram_rst = rst;
+assign cfg_ram_clk = clk_200;
+assign cfg_ram_byte_ena = 4'b1111;
+
 //--------------------------------------------------
 
 wire            rst_300;
@@ -554,12 +588,22 @@ system bd_system(
     .mdio_phy_mdio_o(mdio_phy_mdio_o),
     .mdio_phy_mdio_t(mdio_phy_mdio_t),
     .o_eth_reset_n(eth_reset_n),
+    
+    .gpio_tri_o(gpio),
+    .i_intr(interrupt),
+    .cfg_ram_addr({{21'h0},cfg_ram_addr}),
+    .cfg_ram_clk(cfg_ram_clk),
+    .cfg_ram_din(cfg_ram_din),
+    .cfg_ram_dout(cfg_ram_dout),
+    .cfg_ram_en(cfg_ram_ena),
+    .cfg_ram_rst(cfg_ram_rst),
+    .cfg_ram_we(cfg_ram_byte_ena),
 
     //devive management
-    .i_temper(temper),
-    .i_temper_valid(temper_valid),
+    .i_temper(12'h35a),
+    .i_temper_valid(1'b1),
     .i_usr_reg_rdata(usr_reg_rdata),
-    .i_version(version),
+    .i_version(32'h20200705),
     .o_soft_rst(soft_rst),
     .o_status_reg_data(status_reg_data),
     .o_status_reg_valid(status_reg_valid),
