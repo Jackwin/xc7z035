@@ -6,6 +6,7 @@ module ad9434_data #(
     ) (
     input           clk_200m,
     input           rst,
+    input           i_data_mode, // When mode is '1', use the test data
     input           i_trig,
     input [9:0]     i_us_capture,
 
@@ -423,9 +424,23 @@ logic fifo_256b_done_r2;
 logic fifo_256b_done_cdc;
 logic fifo_256b_done_sync;
 logic fifo_256b_done_dm;
+logic [15:0]    data_gen;
+
+always_ff @(adc_clk) begin : data_gen
+    if (rst) begin
+        data_gen <= 'h0;
+    end else begin
+        if (cs == CAPTURE) begin
+            data_gen <= data_gen + 1'b1;
+        end else begin
+            data_gen <= 'h0;
+        end
+    end
+    
+end
 always_comb begin
     adc_data = {adc_data1, adc_data2};
-    fifo_din = {4'h0, adc_data};
+    fifo_din = !i_data_mode ? {4'h0, adc_data} : data_gen;
     fifo_wr_ena = (cs == CAPTURE);
     fifo_256b_done = (cs == CAPTURE) & (fifo_wr_cnt == 7'h7f);
 end

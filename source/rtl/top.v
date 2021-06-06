@@ -202,9 +202,9 @@ always @(posedge clk_20) begin
     if (rst_20) begin
         led_on <= 1'b0;
     end else begin
-        if (device_cfg_done) begin
+       // if (device_cfg_done) begin // In order debug the board without ADC, comment this
             led_on <= 1'b1;
-        end
+       // end
     end
 end
 
@@ -802,12 +802,16 @@ vio_sys vio_sys_i (
 );
 
 // --------------------- ADC ---------------------------
+
+wire    adc0_data_mode;
+wire    adc1_data_mode;
 ad9434_data # (
     .WR_EOF_VAL(4'b1010),
     .DDR_DES_ADDR(32'h3000_0000)
     ) ad9434_data_0(
     .rst(rst),
     .clk_200m(clk_200),
+    .i_data_mode(adc0_data_mode),
     .i_trig(pulse_gen_trig),
     .i_us_capture(10'd10),
     .i_adc0_din_p(adc0_din_p),
@@ -851,6 +855,7 @@ ad9434_data # (
     )ad9434_data_1(
     .rst(rst),
     .clk_200m(clk_200),
+    .i_data_mode(adc1_data_mode),
     .i_trig(pulse_gen_trig),
     .i_us_capture(10'd10),
     .i_adc0_din_p(adc1_din_p),
@@ -1145,6 +1150,7 @@ vio_datamover vio_adc1_datamover_inst (
   .probe_out2(adc1_dm_start_addr)  // output wire [31 : 0] probe_out2
 );
 
+
 datamover_rd  adc1_datamover_rd_inst(
     .clk(clk_300),
     .rst(rst_300),
@@ -1163,6 +1169,9 @@ datamover_rd  adc1_datamover_rd_inst(
     .i_mm2s_rd_tlast(adc1_user_mm2s_rd_tlast),
     .o_mm2s_rd_tready(adc1_user_mm2s_rd_tready)
 );
+
+
+
 
 /*
 
